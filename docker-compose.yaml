@@ -1,0 +1,10 @@
+version: "3"
+services:
+  algo:
+    build:
+      context: .
+    volumes:
+      - .:/home/algo/workspace:cached
+    working_dir: /home/algo/workspace
+    network_mode: host
+    tty: true
