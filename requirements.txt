@@ -1,1 +1,3 @@
 py-algorand-sdk
+pyteal
+pytest
