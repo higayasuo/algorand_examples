@@ -1,2 +1,2 @@
-# algorand_python_examples
-Python examples for Algorand
+# pyteal_examples
+Pyteal examples
