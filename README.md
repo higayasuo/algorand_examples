@@ -1,2 +1,2 @@
-# pyteal_examples
+# pyteal-examples
 Pyteal examples
