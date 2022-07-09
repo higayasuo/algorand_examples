@@ -4,7 +4,7 @@
 {
 	"name": "pyteal",
   "dockerComposeFile": ["../docker-compose.yml"],
-  "service": "algo",
+  "service": "app",
   "workspaceFolder": "/app",
 
 
