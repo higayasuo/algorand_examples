@@ -1,11 +1,17 @@
 ARG VARIANT="3.10-bullseye"
 FROM mcr.microsoft.com/vscode/devcontainers/python:0-${VARIANT}
 
-RUN adduser algo && usermod -aG algo algo
+# RUN adduser algo && usermod -aG algo algo && usermod -aG sudo algo
 
-WORKDIR /app
+# RUN apt-get install -y --no-install-recommends sudo && \
+#     echo "Defaults:algo !env_reset" > /etc/sudoers && \
+#     echo "algo    ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-USER algo
+# WORKDIR /app
+
+# RUN chown -R algo /app
+
+USER vscode
 
 RUN echo "export PROMPT_DIRTRIM=2" >> ~/.bashrc
 RUN echo 'export PS1="\w$ "' >> ~/.bashrc

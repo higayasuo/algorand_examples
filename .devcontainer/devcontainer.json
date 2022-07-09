@@ -3,19 +3,24 @@
 // If you want to run as a non-root user in the container, see .devcontainer/docker-compose.yml.
 {
 	"name": "pyteal",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "algo",
+  "workspaceFolder": "/app",
 
-	"build": {
-    		"dockerfile": "../Dockerfile",
-    		"args": { "VARIANT": "3.10-bullseye" }
-  	},
+
+	// "build": {
+  //   "dockerComposeFile": ["../docker-compose.yml"]
+  //   // "dockerfile": "../Dockerfile",
+  //   // "args": { "VARIANT": "3.10-bullseye" }
+  // 	},
 
 	// The optional 'workspaceFolder' property is the path VS Code should open by default when
 	// connected. This is typically a file mount in .devcontainer/docker-compose.yml
-	"workspaceFolder": "/home/algo/workspace",
+	// "workspaceFolder": "/home/algo/workspace",
 
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
-    		"python.defaultInterpreterPath": "/usr/local/bin/python",
+    "python.defaultInterpreterPath": "/usr/local/bin/python",
 		"python.linting.enabled": true,
 		"python.linting.pylintEnabled": true,
 		"python.formatting.autopep8Path": "/usr/local/py-utils/bin/autopep8",
@@ -33,11 +38,11 @@
 	"extensions": [
     "ms-python.python",
     "ms-python.vscode-pylance"
-  ]
+  ],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-	"runArgs": ["--network=host"],
+	// "runArgs": ["--network=host"],
 
 	// Uncomment the next line if you want start specific services in your Docker Compose config.
 	// "runServices": [],
@@ -46,8 +51,8 @@
 	// "shutdownAction": "none",
 
 	// Uncomment the next line to run commands after the container is created - for example installing curl.
-	// "postCreateCommand": "apt-get update && apt-get install -y curl",
+	// "postCreateCommand": "sudo chown -R algo /app",
 
 	// Uncomment to connect as a non-root user if you've added one. See https://aka.ms/vscode-remote/containers/non-root.
-	// "remoteUser": "vscode"
+	"remoteUser": "vscode"
 }
