@@ -1,6 +1,10 @@
 from pyteal import (Approve, Reject, Mode, compileTeal, Cond, If,
                     Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global,
                     ScratchVar, TealType)
+from algosdk.future import transaction
+from algosdk import mnemonic
+
+from helper import create_algod_client, compile_smart_contract, create_app, call_app, read_global_state
 
 
 handle_creation = Seq(
@@ -56,5 +60,33 @@ def clear_state_program():
     return compileTeal(program, Mode.Application, version=6)
 
 
+def main():
+    creator_mnemonic = "similar solution pepper old sand trend twin joke dolphin tank salad "\
+        "shoe across latin robust broccoli hold exact kite sorry follow man excite absent magic"
+
+    client = create_algod_client()
+
+    approval = compile_smart_contract(client, approval_program())
+    clear = compile_smart_contract(client, clear_state_program())
+    private_key = mnemonic.to_private_key(creator_mnemonic)
+    global_schema = transaction.StateSchema(1, 0)
+    local_schema = transaction.StateSchema(0, 0)
+
+    app_id = create_app(client, private_key, approval,
+                        clear, global_schema, local_schema)
+
+    print(read_global_state(client, app_id))
+
+    app_args = ["Add"]
+    print("Call Add")
+    call_app(client, private_key, app_id, app_args)
+    print(read_global_state(client, app_id))
+
+    app_args = ["Subtract"]
+    print("Call Subtract")
+    call_app(client, private_key, app_id, app_args)
+    print(read_global_state(client, app_id))
+
+
 if __name__ == '__main__':
-    print(approval_program())
+    main()

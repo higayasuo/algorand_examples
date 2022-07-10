@@ -1,6 +1,4 @@
 py-algorand-sdk
 pyteal
-pytest
 flake8
 autopep8
-pytest-watch
