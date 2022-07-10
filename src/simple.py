@@ -61,14 +61,13 @@ def clear_state_program():
 
 
 def main():
-    creator_mnemonic = "similar solution pepper old sand trend twin joke dolphin tank salad "\
-        "shoe across latin robust broccoli hold exact kite sorry follow man excite absent magic"
+    from mnemonics import mnemonic2
 
     client = create_algod_client()
 
     approval = compile_smart_contract(client, approval_program())
     clear = compile_smart_contract(client, clear_state_program())
-    private_key = mnemonic.to_private_key(creator_mnemonic)
+    private_key = mnemonic.to_private_key(mnemonic2)
     global_schema = transaction.StateSchema(1, 0)
     local_schema = transaction.StateSchema(0, 0)
 

@@ -3,7 +3,6 @@ import base64
 from algosdk.future import transaction
 from algosdk import account
 from algosdk.v2client import algod
-from pyteal import compileTeal, Approve, Mode
 
 algod_url = "http://localhost:4001"
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -23,11 +22,8 @@ def compile_smart_signature(client, source_code):
     return compile_response['result'], compile_response['hash']
 
 
-def sign_send_wait_transaction(client, txn, private_key):
-    signed_txn = txn.sign(private_key)
-    tx_id = signed_txn.transaction.get_txid()
-
-    client.send_transactions([signed_txn])
+def send_wait_transaction(client, signed_txn):
+    tx_id = client.send_transactions([signed_txn])
 
     try:
         transaction_response = transaction.wait_for_confirmation(
@@ -40,6 +36,12 @@ def sign_send_wait_transaction(client, txn, private_key):
     except Exception as err:
         print(err)
         return
+
+
+def sign_send_wait_transaction(client, txn, private_key):
+    signed_txn = txn.sign(private_key)
+
+    return send_wait_transaction(client, signed_txn)
 
 
 def create_app(client, private_key, approval_program, clear_program, global_schema, local_schema):
@@ -94,10 +96,14 @@ def call_app(client, private_key, app_id, app_args):
 
 
 def main():
+    from pyteal import compileTeal, Approve, Mode
+
     client = create_algod_client()
     teal = compileTeal(Approve(), Mode.Signature)
 
-    print(compile_smart_signature(client, teal))
+    prog, addr = compile_smart_signature(client, teal)
+    print(prog, addr)
+    print(base64.decodebytes(prog.encode()))
 
 
 if __name__ == '__main__':
