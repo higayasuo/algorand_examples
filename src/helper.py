@@ -4,8 +4,8 @@ from algosdk.future import transaction
 from algosdk import account
 from algosdk.v2client import algod
 
-algod_url = "http://localhost:4001"
-algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+algod_url = "https://node.testnet.algoexplorerapi.io:443"
+algod_token = ""
 
 
 def create_algod_client():

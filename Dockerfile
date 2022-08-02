@@ -26,6 +26,6 @@ RUN echo '"\\C-n": history-search-forward' >> ~/.inputrc
 RUN echo '"\\e[A": history-search-backward' >> ~/.inputrc
 RUN echo '"\\e[B": history-search-forward' >> ~/.inputrc
 
-COPY requirements.txt .
+# COPY requirements.txt .
 
-RUN pip3 install -r requirements.txt
+# RUN pip3 install -r requirements.txt

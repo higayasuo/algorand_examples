@@ -18,7 +18,7 @@
   // "workspaceFolder": "/home/algo/workspace",
   // Set *default* container specific settings.json values on container create.
   "settings": {
-    "python.defaultInterpreterPath": "/usr/local/bin/python",
+    "python.defaultInterpreterPath": "/app/local/bin/python",
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled": true,
@@ -36,7 +36,10 @@
     "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
     "python.linting.flake8Args": [
       "--max-line-length=150"
-    ]
+    ],
+    "[python]": {
+      "editor.tabSize": 4
+    }
   },
   // Add the IDs of extensions you want installed when the container is created.
   "extensions": [
