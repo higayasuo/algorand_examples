@@ -15,6 +15,10 @@ class AppMethods:
     subtract = 'subtract'
 
 
+global_schema = transaction.StateSchema(1, 0)
+local_schema = transaction.StateSchema(0, 0)
+
+
 def handle_creation():
     return Seq(
         App.globalPut(GlobalVariables.count, Int(0)),
@@ -79,9 +83,6 @@ def main():
     clear_teal = compileTeal(
         clear_state_program(), Mode.Application, version=6)
     clear = compile_smart_contract(client, clear_teal)
-
-    global_schema = transaction.StateSchema(1, 0)
-    local_schema = transaction.StateSchema(0, 0)
 
     app_id = create_app(client, private_key, approval,
                         clear, global_schema, local_schema)

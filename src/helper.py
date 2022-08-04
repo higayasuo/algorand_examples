@@ -1,32 +1,35 @@
-import base64
+from base64 import b64decode
 
-from algosdk.future import transaction
-from algosdk import account
-from algosdk.v2client import algod
+from algosdk.future.transaction import (
+    SignedTransaction, AssetConfigTxn, wait_for_confirmation, OnComplete, ApplicationCreateTxn, ApplicationNoOpTxn)
+from algosdk.account import address_from_private_key
+from algosdk.v2client.algod import AlgodClient
+from algosdk.encoding import encode_address
+
 
 algod_url = "https://node.testnet.algoexplorerapi.io:443"
 algod_token = ""
 
 
-def create_algod_client():
-    return algod.AlgodClient(algod_token, algod_url)
+def create_algod_client() -> AlgodClient:
+    return AlgodClient(algod_token, algod_url)
 
 
-def compile_smart_contract(client, source_code):
+def compile_smart_contract(client: AlgodClient, source_code: str) -> bytes:
     compile_response = client.compile(source_code)
-    return base64.b64decode(compile_response['result'])
+    return b64decode(compile_response['result'])
 
 
-def compile_smart_signature(client, source_code):
+def compile_smart_signature(client: AlgodClient, source_code: str) -> (str, str):
     compile_response = client.compile(source_code)
     return compile_response['result'], compile_response['hash']
 
 
-def send_wait_transaction(client, signed_txn):
+def send_wait_transaction(client: AlgodClient, signed_txn: SignedTransaction):
     tx_id = client.send_transactions([signed_txn])
 
     try:
-        transaction_response = transaction.wait_for_confirmation(
+        transaction_response = wait_for_confirmation(
             client, tx_id, 5)
         print("TXID: ", tx_id)
         print("Result confirmed in round: {}".format(
@@ -38,27 +41,79 @@ def send_wait_transaction(client, signed_txn):
         return
 
 
-def sign_send_wait_transaction(client, txn, private_key):
+def sign_send_wait_transaction(client: AlgodClient, txn, private_key: str):
     signed_txn = txn.sign(private_key)
 
     return send_wait_transaction(client, signed_txn)
 
 
-def create_app(client, private_key, approval_program, clear_program, global_schema, local_schema):
-    sender = account.address_from_private_key(private_key)
-    on_complete = transaction.OnComplete.NoOpOC.real
+def create_asset(client: AlgodClient, sender: str, sender_private_key: str,
+                 total=None, decimals=None, default_frozen=None,
+                 unit_name=None, asset_name=None, manager=None, reserve=None, freeze=None, clawback=None) -> int:
+    sp = client.suggested_params()
+
+    txn = AssetConfigTxn(
+        sender=sender,
+        sp=sp,
+        total=total,
+        decimals=decimals,
+        default_frozen=default_frozen,
+        unit_name=unit_name,
+        asset_name=asset_name,
+        manager=manager,
+        reserve=reserve,
+        freeze=freeze,
+        clawback=clawback,
+    )
+    txn_res = sign_send_wait_transaction(client, txn, sender_private_key)
+
+    asset_id = txn_res['asset-index']
+    print('Asset ID:', asset_id)
+
+    return asset_id
+
+
+def create_app(client: AlgodClient, private_key: str,
+               approval_program: bytes, clear_program: bytes, global_schema, local_schema, foreign_assets=None):
+    sender = address_from_private_key(private_key)
+    on_complete = OnComplete.NoOpOC.real
     params = client.suggested_params()
 
-    txn = transaction.ApplicationCreateTxn(sender, params, on_complete,
-                                           approval_program, clear_program,
-                                           global_schema, local_schema)
+    txn = ApplicationCreateTxn(sender, params, on_complete,
+                               approval_program, clear_program,
+                               global_schema, local_schema, foreign_assets=foreign_assets)
 
     txn_res = sign_send_wait_transaction(client, txn, private_key)
     app_id = txn_res['application-index']
 
-    print("Created new app-id:", app_id)
+    print("Application ID:", app_id)
 
     return app_id
+
+
+def call_app(client, private_key, app_id, app_args):
+    sender = address_from_private_key(private_key)
+    params = client.suggested_params()
+
+    txn = ApplicationNoOpTxn(sender, params, app_id, app_args)
+
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Application called:", app_id, app_args)
+
+
+def format_b64bytes(val: bytes):
+    formatted_value = b64decode(val)
+
+    try:
+        formatted_value = formatted_value.decode('utf-8')
+    except UnicodeDecodeError:
+        try:
+            formatted_value = encode_address(formatted_value)
+        except Exception:
+            pass
+
+    return formatted_value
 
 
 def format_state(state):
@@ -66,11 +121,11 @@ def format_state(state):
     for item in state:
         key = item['key']
         value = item['value']
-        formatted_key = base64.b64decode(key).decode('utf-8')
+        formatted_key = b64decode(key).decode('utf-8')
         if value['type'] == 1:
             # byte string
-            formatted_value = base64.b64decode(
-                value['bytes']).decode('utf-8')
+            formatted_value = format_b64bytes(
+                value['bytes'])
             formatted[formatted_key] = formatted_value
         else:
             # integer
@@ -78,21 +133,10 @@ def format_state(state):
     return formatted
 
 
-def read_global_state(client, app_id):
+def read_global_state(client: AlgodClient, app_id: int):
     app_info = client.application_info(app_id)
     global_state = app_info["params"]["global-state"] if "global-state" in app_info['params'] else []
     return format_state(global_state)
-
-
-def call_app(client, private_key, app_id, app_args):
-    sender = account.address_from_private_key(private_key)
-    params = client.suggested_params()
-
-    txn = transaction.ApplicationNoOpTxn(sender, params, app_id, app_args)
-
-    sign_send_wait_transaction(client, txn, private_key)
-
-    print("Application called")
 
 
 def main():
@@ -103,7 +147,6 @@ def main():
 
     prog, addr = compile_smart_signature(client, teal)
     print(prog, addr)
-    print(base64.decodebytes(prog.encode()))
 
 
 if __name__ == '__main__':
