@@ -48,8 +48,10 @@ def sign_send_wait_transaction(client: AlgodClient, txn, private_key: str):
 
 
 def create_asset(client: AlgodClient, private_key: str,
-                 total=None, decimals=None, default_frozen=None,
-                 unit_name=None, asset_name=None, manager=None, reserve=None, freeze=None, clawback=None) -> int:
+                 total: int = None, decimals: int = None,
+                 default_frozen: bool = None,
+                 unit_name: str = None, asset_name: str = None,
+                 manager: str = None, reserve: str = None, freeze: str = None, clawback: str = None) -> int:
     sender = address_from_private_key(private_key)
     sp = client.suggested_params()
 
@@ -73,6 +75,30 @@ def create_asset(client: AlgodClient, private_key: str,
     print('Created Asset ID:', asset_id)
 
     return asset_id
+
+
+def change_asset(client: AlgodClient, private_key: str,
+                 asset_id: int, manager: str = None, reserve: str = None,
+                 freeze: str = None, clawback: str = None) -> None:
+    sender = address_from_private_key(private_key)
+    sp = client.suggested_params()
+
+    txn = AssetConfigTxn(
+        sender=sender,
+        sp=sp,
+        manager=manager,
+        reserve=reserve,
+        freeze=freeze,
+        clawback=clawback,
+    )
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print('Sender:', sender)
+    print('Updated Asset ID:', asset_id)
+    print('Manager:', manager)
+    print('Reserve:', reserve)
+    print('Freeze:', freeze)
+    print('Clawback:', clawback)
 
 
 def create_app(client: AlgodClient, private_key: str,

@@ -9,7 +9,7 @@ import helper
 from helper import (create_algod_client,
                     compile_smart_contract, create_app,
                     read_global_state)
-from accounts import test1_private_key
+from accounts import test1_private_key, test2_private_key
 import escrow_asc1
 
 
@@ -38,7 +38,7 @@ def create_escrow_asc1(client: AlgodClient, private_key: str, asset_id: int) -> 
         escrow_asc1.clear_state_program(), Mode.Application, version=6)
     clear = compile_smart_contract(client, clear_teal)
 
-    amount = 1
+    amount = 1000000
 
     app_id = create_app(client, private_key, approval,
                         clear, escrow_asc1.global_schema, escrow_asc1.local_schema,
@@ -52,13 +52,37 @@ def create_escrow_asc1(client: AlgodClient, private_key: str, asset_id: int) -> 
     return app_id, app_address
 
 
+def change_asset(client: AlgodClient, private_key: str, asset_id: int,
+                 escrow_address: str):
+    sender = address_from_private_key(private_key)
+
+    return helper.change_asset(client, private_key,
+                               asset_id,
+                               manager=sender,
+                               reserve=sender,
+                               freeze=sender,
+                               clawback=escrow_address,
+                               )
+
+
+def buy(client: AlgodClient, private_key: str, app_id: int):
+    app_args = [escrow_asc1.AppMethods.buy]
+
+    helper.call_app(client, private_key, app_id, app_args=app_args)
+    print(read_global_state(client, app_id))
+
+
 def main():
     client = create_algod_client()
     owner_private_key = test1_private_key
 
     asset_id = create_asset(client, owner_private_key)
-    app_id, app_address = create_escrow_asc1(
+    app_id, escrow_address = create_escrow_asc1(
         client, owner_private_key, asset_id)
+    change_asset(client, owner_private_key, asset_id, escrow_address)
+
+    buyer_private_key = test2_private_key
+    buy(client, buyer_private_key, app_id)
 
 
 if __name__ == '__main__':

@@ -1,19 +1,25 @@
 from pyteal import (Approve, Reject, Cond,
-                    Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global, Btoi)
+                    Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global, Btoi,
+                    TealType, If, Subroutine, TxnType)
 from algosdk.future.transaction import StateSchema
 
 
 class GlobalVariables:
-    owner = Bytes("owner")
-    asset_id = Bytes("asset_id")
-    amount = Bytes("amount")
+    owner = Bytes('owner')
+    asset_id = Bytes('asset_id')
+    amount = Bytes('amount')
+    debug = Bytes('debug')
 
 
 class AppMethods:
-    initialize = 'initialize'
+    buy = 'buy'
 
 
-global_schema = StateSchema(2, 1)
+class Constants:
+    royalty = Int(1000)
+
+
+global_schema = StateSchema(2, 2)
 local_schema = StateSchema(0, 0)
 
 
@@ -28,8 +34,31 @@ def handle_creation():
     )
 
 
-def initialize():
+@Subroutine(TealType.none)
+def buy_when_owner_is_creator(owner, amount):
     return Seq(
+        App.globalPut(
+            GlobalVariables.debug, Bytes('Buy from creator')),
+    )
+
+
+@Subroutine(TealType.none)
+def buy_when_owner_is_not_creator():
+    return Seq(
+        App.globalPut(
+            GlobalVariables.debug, Bytes('Buy from ownner'))
+    )
+
+
+def buy():
+    creator = Global.creator_address()
+    owner = App.globalGet(GlobalVariables.owner)
+    amount = App.globalGet(GlobalVariables.amount)
+
+    return Seq(
+        Assert(amount > Int(0)),
+        If(creator == owner).Then(buy_when_owner_is_creator(owner, amount)).Else(
+            buy_when_owner_is_not_creator()),
         Approve()
     )
 
@@ -39,7 +68,7 @@ def handle_noop():
         # Assert(Global.group_size() == Int(1)),
         Cond(
             [Txn.application_args[0] == Bytes(
-                AppMethods.initialize), initialize()],
+                AppMethods.buy), buy()],
 
         )
     )
