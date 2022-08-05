@@ -13,7 +13,7 @@ from accounts import test1_private_key, test2_private_key
 import escrow_asc1
 
 
-def create_asset(client: AlgodClient, private_key: str):
+def create_asset(client: AlgodClient, private_key: str, escrow_address: str):
     sender = address_from_private_key(private_key)
 
     return helper.create_asset(client, private_key,
@@ -25,11 +25,11 @@ def create_asset(client: AlgodClient, private_key: str):
                                manager=sender,
                                reserve=sender,
                                freeze=sender,
-                               clawback=sender,
+                               clawback=escrow_address,
                                )
 
 
-def create_escrow_asc1(client: AlgodClient, private_key: str, asset_id: int) -> int:
+def create_escrow_asc1(client: AlgodClient, private_key: str) -> int:
     approval_teal = compileTeal(
         escrow_asc1.approval_program(), Mode.Application, version=6)
     approval = compile_smart_contract(client, approval_teal)
@@ -38,12 +38,8 @@ def create_escrow_asc1(client: AlgodClient, private_key: str, asset_id: int) -> 
         escrow_asc1.clear_state_program(), Mode.Application, version=6)
     clear = compile_smart_contract(client, clear_teal)
 
-    amount = 1000000
-
-    app_id = create_app(client, private_key, approval,
-                        clear, escrow_asc1.global_schema, escrow_asc1.local_schema,
-                        foreign_assets=[asset_id],
-                        app_args=[amount])
+    app_id = create_app(client, private_key, approval, clear,
+                        escrow_asc1.global_schema, escrow_asc1.local_schema)
     app_address = get_application_address(app_id)
     print('Application Address:', app_address)
 
@@ -52,17 +48,13 @@ def create_escrow_asc1(client: AlgodClient, private_key: str, asset_id: int) -> 
     return app_id, app_address
 
 
-def change_asset(client: AlgodClient, private_key: str, asset_id: int,
-                 escrow_address: str):
-    sender = address_from_private_key(private_key)
+def init_escrow_asc1(client: AlgodClient, private_key: str, app_id: int, asset_id: int):
+    amount = 1000000
+    app_args = [escrow_asc1.AppMethods.init, amount]
 
-    return helper.change_asset(client, private_key,
-                               asset_id,
-                               manager=sender,
-                               reserve=sender,
-                               freeze=sender,
-                               clawback=escrow_address,
-                               )
+    helper.call_app(client, private_key, app_id,
+                    app_args=app_args, foreign_assets=[asset_id])
+    print(read_global_state(client, app_id))
 
 
 def buy(client: AlgodClient, private_key: str, app_id: int):
@@ -76,13 +68,14 @@ def main():
     client = create_algod_client()
     owner_private_key = test1_private_key
 
-    asset_id = create_asset(client, owner_private_key)
     app_id, escrow_address = create_escrow_asc1(
-        client, owner_private_key, asset_id)
-    change_asset(client, owner_private_key, asset_id, escrow_address)
+        client, owner_private_key)
+    asset_id = create_asset(client, owner_private_key, escrow_address)
 
-    buyer_private_key = test2_private_key
-    buy(client, buyer_private_key, app_id)
+    init_escrow_asc1(client, owner_private_key, app_id, asset_id)
+
+    # buyer_private_key = test2_private_key
+    # buy(client, buyer_private_key, app_id)
 
 
 if __name__ == '__main__':

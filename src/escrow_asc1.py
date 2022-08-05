@@ -1,6 +1,6 @@
 from pyteal import (Approve, Reject, Cond,
                     Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global, Btoi,
-                    TealType, If, Subroutine, TxnType)
+                    TealType, If, Subroutine, TxnType, Gtxn)
 from algosdk.future.transaction import StateSchema
 
 
@@ -12,6 +12,7 @@ class GlobalVariables:
 
 
 class AppMethods:
+    init = 'init'
     buy = 'buy'
 
 
@@ -26,17 +27,74 @@ local_schema = StateSchema(0, 0)
 def handle_creation():
     return Seq(
         Assert(Global.group_size() == Int(1)),
-        Assert(Txn.application_args.length() == Int(1)),
+        common_check_txn(Int(0)),
+        Assert(Txn.application_args.length() == Int(0)),
         App.globalPut(GlobalVariables.owner, Global.creator_address()),
-        App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
-        App.globalPut(GlobalVariables.amount, Btoi(Txn.application_args[0])),
+        # App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
+        # App.globalPut(GlobalVariables.amount, Btoi(Txn.application_args[0])),
         Approve()
+    )
+
+
+@Subroutine(TealType.none)
+def common_check_txn(txn_index):
+    return Seq(
+        Assert(txn_index < Global.group_size()),
+        Assert(Gtxn[txn_index].rekey_to() == Global.zero_address()),
+        Assert(Gtxn[txn_index].close_remainder_to() == Global.zero_address()),
+        Assert(Gtxn[txn_index].asset_close_to() == Global.zero_address())
+    )
+
+
+def init():
+    amount_ex = App.globalGetEx(
+        Int(0), GlobalVariables.amount)
+    amount = Btoi(Txn.application_args[1])
+
+    return Seq(
+        Assert(Global.group_size() == Int(1)),
+        common_check_txn(Int(0)),
+        amount_ex,
+        Assert(amount_ex.hasValue() == Int(0)),
+        Assert(Txn.application_args.length() == Int(2)),
+        Assert(Txn.assets.length() == Int(1)),
+        Assert(amount > Int(0)),
+        App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
+        App.globalPut(GlobalVariables.amount, amount),
+        Approve()
+    )
+
+
+@Subroutine(TealType.none)
+def check_application_call():
+    return Seq(
+        Assert(Gtxn[0].type_enum() == TxnType.ApplicationCall),
+        Assert(Gtxn[0].application_args.length() == Int(1)),
+        Assert(Gtxn[0].application_args[0] == Bytes(AppMethods.buy)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_payment(owner, amount):
+    return Seq(
+        Assert(Gtxn[1].type_enum() == TxnType.Payment),
+        Assert(Gtxn[1].receiver == owner),
+        Assert(Gtxn[1].amount == amount),
+    )
+
+
+@Subroutine(TealType.none)
+def check_buy_when_owner_is_creator(owner, amount):
+    return Seq(
+        Assert(Global.group_size() == Int(1)),
+        check_application_call(),
     )
 
 
 @Subroutine(TealType.none)
 def buy_when_owner_is_creator(owner, amount):
     return Seq(
+        check_buy_when_owner_is_creator(owner, amount),
         App.globalPut(
             GlobalVariables.debug, Bytes('Buy from creator')),
     )
@@ -67,6 +125,8 @@ def handle_noop():
     return Seq(
         # Assert(Global.group_size() == Int(1)),
         Cond(
+            [Txn.application_args[0] == Bytes(
+                AppMethods.init), init()],
             [Txn.application_args[0] == Bytes(
                 AppMethods.buy), buy()],
 

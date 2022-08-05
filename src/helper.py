@@ -103,7 +103,7 @@ def change_asset(client: AlgodClient, private_key: str,
 
 def create_app(client: AlgodClient, private_key: str,
                approval_program: bytes, clear_program: bytes, global_schema: StateSchema, local_schema: StateSchema,
-               foreign_assets: list[str] = None,
+               foreign_assets: list[int] = None,
                app_args: list[bytes] = None):
     sender = address_from_private_key(private_key)
     on_complete = OnComplete.NoOpOC.real
@@ -125,11 +125,13 @@ def create_app(client: AlgodClient, private_key: str,
 
 
 def call_app(client: AlgodClient, private_key: str, app_id: int,
-             app_args: list[bytes] = None):
+             app_args: list[bytes] = None,
+             foreign_assets: list[int] = None):
     sender = address_from_private_key(private_key)
     params = client.suggested_params()
 
-    txn = ApplicationNoOpTxn(sender, params, app_id, app_args)
+    txn = ApplicationNoOpTxn(sender, params, app_id,
+                             app_args, foreign_assets=foreign_assets)
 
     sign_send_wait_transaction(client, txn, private_key)
 
