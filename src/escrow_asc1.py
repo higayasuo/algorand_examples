@@ -1,29 +1,29 @@
-from pyteal import (Approve, Reject, Mode, compileTeal, Cond, If,
-                    Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global,
-                    ScratchVar, TealType)
-from algosdk.future import transaction
-
-from helper import create_algod_client, compile_smart_contract, create_app, call_app, read_global_state
+from pyteal import (Approve, Reject, Cond,
+                    Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global, Btoi)
+from algosdk.future.transaction import StateSchema
 
 
 class GlobalVariables:
     owner = Bytes("owner")
     asset_id = Bytes("asset_id")
+    amount = Bytes("amount")
 
 
 class AppMethods:
     initialize = 'initialize'
 
 
-global_schema = transaction.StateSchema(1, 1)
-local_schema = transaction.StateSchema(0, 0)
+global_schema = StateSchema(2, 1)
+local_schema = StateSchema(0, 0)
 
 
 def handle_creation():
     return Seq(
         Assert(Global.group_size() == Int(1)),
+        Assert(Txn.application_args.length() == Int(1)),
         App.globalPut(GlobalVariables.owner, Global.creator_address()),
         App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
+        App.globalPut(GlobalVariables.amount, Btoi(Txn.application_args[0])),
         Approve()
     )
 

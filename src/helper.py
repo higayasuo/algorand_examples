@@ -1,7 +1,7 @@
 from base64 import b64decode
 
 from algosdk.future.transaction import (
-    SignedTransaction, AssetConfigTxn, wait_for_confirmation, OnComplete, ApplicationCreateTxn, ApplicationNoOpTxn)
+    SignedTransaction, AssetConfigTxn, wait_for_confirmation, OnComplete, ApplicationCreateTxn, ApplicationNoOpTxn, StateSchema)
 from algosdk.account import address_from_private_key
 from algosdk.v2client.algod import AlgodClient
 from algosdk.encoding import encode_address
@@ -47,9 +47,10 @@ def sign_send_wait_transaction(client: AlgodClient, txn, private_key: str):
     return send_wait_transaction(client, signed_txn)
 
 
-def create_asset(client: AlgodClient, sender: str, sender_private_key: str,
+def create_asset(client: AlgodClient, private_key: str,
                  total=None, decimals=None, default_frozen=None,
                  unit_name=None, asset_name=None, manager=None, reserve=None, freeze=None, clawback=None) -> int:
+    sender = address_from_private_key(private_key)
     sp = client.suggested_params()
 
     txn = AssetConfigTxn(
@@ -65,33 +66,40 @@ def create_asset(client: AlgodClient, sender: str, sender_private_key: str,
         freeze=freeze,
         clawback=clawback,
     )
-    txn_res = sign_send_wait_transaction(client, txn, sender_private_key)
+    txn_res = sign_send_wait_transaction(client, txn, private_key)
 
     asset_id = txn_res['asset-index']
-    print('Asset ID:', asset_id)
+    print('Sender:', sender)
+    print('Created Asset ID:', asset_id)
 
     return asset_id
 
 
 def create_app(client: AlgodClient, private_key: str,
-               approval_program: bytes, clear_program: bytes, global_schema, local_schema, foreign_assets=None):
+               approval_program: bytes, clear_program: bytes, global_schema: StateSchema, local_schema: StateSchema,
+               foreign_assets: list[str] = None,
+               app_args: list[bytes] = None):
     sender = address_from_private_key(private_key)
     on_complete = OnComplete.NoOpOC.real
     params = client.suggested_params()
 
     txn = ApplicationCreateTxn(sender, params, on_complete,
                                approval_program, clear_program,
-                               global_schema, local_schema, foreign_assets=foreign_assets)
+                               global_schema, local_schema, foreign_assets=foreign_assets,
+                               app_args=app_args,
+                               )
 
     txn_res = sign_send_wait_transaction(client, txn, private_key)
     app_id = txn_res['application-index']
 
-    print("Application ID:", app_id)
+    print('Sender:', sender)
+    print("Created Application ID:", app_id)
 
     return app_id
 
 
-def call_app(client, private_key, app_id, app_args):
+def call_app(client: AlgodClient, private_key: str, app_id: int,
+             app_args: list[bytes] = None):
     sender = address_from_private_key(private_key)
     params = client.suggested_params()
 
@@ -99,6 +107,7 @@ def call_app(client, private_key, app_id, app_args):
 
     sign_send_wait_transaction(client, txn, private_key)
 
+    print('Sender:', sender)
     print("Application called:", app_id, app_args)
 
 
