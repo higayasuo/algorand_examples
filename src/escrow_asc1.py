@@ -1,6 +1,7 @@
 from pyteal import (Approve, Reject, Cond,
                     Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global, Btoi,
-                    TealType, If, Subroutine, TxnType, Gtxn)
+                    TealType, If, Subroutine, TxnType, Gtxn, InnerTxnBuilder,
+                    TxnField)
 from algosdk.future.transaction import StateSchema
 
 
@@ -30,8 +31,6 @@ def handle_creation():
         common_check_txn(Int(0)),
         Assert(Txn.application_args.length() == Int(0)),
         App.globalPut(GlobalVariables.owner, Global.creator_address()),
-        # App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
-        # App.globalPut(GlobalVariables.amount, Btoi(Txn.application_args[0])),
         Approve()
     )
 
@@ -84,19 +83,35 @@ def check_payment(owner, amount):
 
 
 @Subroutine(TealType.none)
-def check_buy_when_owner_is_creator(owner, amount):
+def check_buy_when_owner_is_creator(owner, buyer):
     return Seq(
         Assert(Global.group_size() == Int(1)),
+        Assert(owner != buyer),
         check_application_call(),
     )
 
 
 @Subroutine(TealType.none)
-def buy_when_owner_is_creator(owner, amount):
+def transfor_asset(owner, buyer, asset_id):
     return Seq(
-        check_buy_when_owner_is_creator(owner, amount),
-        App.globalPut(
-            GlobalVariables.debug, Bytes('Buy from creator')),
+        InnerTxnBuilder.Begin(),
+        InnerTxnBuilder.SetFields({
+            TxnField.type_enum: TxnType.AssetTransfer,
+            TxnField.asset_sender: owner,
+            TxnField.asset_receiver: buyer,
+            TxnField.xfer_asset: asset_id,
+            TxnField.asset_amount: Int(1),
+        }),
+        InnerTxnBuilder.Submit(),
+    )
+
+
+@Subroutine(TealType.none)
+def buy_when_owner_is_creator(owner, asset_id):
+    buyer = Gtxn[0].sender()
+    return Seq(
+        check_buy_when_owner_is_creator(owner, buyer),
+        transfor_asset(owner, buyer, asset_id),
     )
 
 
@@ -111,11 +126,12 @@ def buy_when_owner_is_not_creator():
 def buy():
     creator = Global.creator_address()
     owner = App.globalGet(GlobalVariables.owner)
+    asset_id = App.globalGet(GlobalVariables.asset_id)
     amount = App.globalGet(GlobalVariables.amount)
 
     return Seq(
         Assert(amount > Int(0)),
-        If(creator == owner).Then(buy_when_owner_is_creator(owner, amount)).Else(
+        If(creator == owner).Then(buy_when_owner_is_creator(owner, asset_id)).Else(
             buy_when_owner_is_not_creator()),
         Approve()
     )

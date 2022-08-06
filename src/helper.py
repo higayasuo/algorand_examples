@@ -20,13 +20,13 @@ def compile_smart_contract(client: AlgodClient, source_code: str) -> bytes:
     return b64decode(compile_response['result'])
 
 
-def compile_smart_signature(client: AlgodClient, source_code: str) -> (str, str):
+def compile_smart_signature(client: AlgodClient, source_code: str) -> tuple[str, str]:
     compile_response = client.compile(source_code)
     return compile_response['result'], compile_response['hash']
 
 
-def send_wait_transaction(client: AlgodClient, signed_txn: SignedTransaction):
-    tx_id = client.send_transactions([signed_txn])
+def send_wait_transaction(client: AlgodClient, signed_txns: list[SignedTransaction]):
+    tx_id = client.send_transactions(signed_txns)
 
     try:
         transaction_response = wait_for_confirmation(
@@ -44,7 +44,7 @@ def send_wait_transaction(client: AlgodClient, signed_txn: SignedTransaction):
 def sign_send_wait_transaction(client: AlgodClient, txn, private_key: str):
     signed_txn = txn.sign(private_key)
 
-    return send_wait_transaction(client, signed_txn)
+    return send_wait_transaction(client, [signed_txn])
 
 
 def create_asset(client: AlgodClient, private_key: str,
@@ -126,12 +126,14 @@ def create_app(client: AlgodClient, private_key: str,
 
 def call_app(client: AlgodClient, private_key: str, app_id: int,
              app_args: list[bytes] = None,
-             foreign_assets: list[int] = None):
+             foreign_assets: list[int] = None,
+             accounts: list[int] = None):
     sender = address_from_private_key(private_key)
     params = client.suggested_params()
 
     txn = ApplicationNoOpTxn(sender, params, app_id,
-                             app_args, foreign_assets=foreign_assets)
+                             app_args, foreign_assets=foreign_assets,
+                             accounts=accounts)
 
     sign_send_wait_transaction(client, txn, private_key)
 
