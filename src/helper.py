@@ -30,7 +30,7 @@ def send_wait_transaction(client: AlgodClient, signed_txns: list[SignedTransacti
 
     try:
         transaction_response = wait_for_confirmation(
-            client, tx_id, 5)
+            client, tx_id, 10)
         print("TXID: ", tx_id)
         print("Result confirmed in round: {}".format(
             transaction_response['confirmed-round']))

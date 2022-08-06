@@ -51,13 +51,18 @@ def init():
     amount = Btoi(Txn.application_args[1])
 
     return Seq(
-        Assert(Global.group_size() == Int(1)),
+        Assert(Global.group_size() == Int(2)),
         common_check_txn(Int(0)),
+        common_check_txn(Int(1)),
         amount_ex,
         Assert(amount_ex.hasValue() == Int(0)),
-        Assert(Txn.application_args.length() == Int(2)),
-        Assert(Txn.assets.length() == Int(1)),
+        Assert(Gtxn[0].sender() == Global.creator_address()),
+        Assert(Gtxn[0].application_args.length() == Int(2)),
+        Assert(Gtxn[0].assets.length() == Int(1)),
         Assert(amount > Int(0)),
+        Assert(Gtxn[1].type_enum() == TxnType.Payment),
+        Assert(Gtxn[1].sender() == Global.creator_address()),
+        Assert(Gtxn[1].receiver() == Global.current_application_address()),
         App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
         App.globalPut(GlobalVariables.amount, amount),
         Approve()

@@ -62,7 +62,7 @@ def init_escrow_asc1(client: AlgodClient, private_key: str, app_id: int, asset_i
     # sign_send_wait_transaction(client, txn, private_key)
 
     app_address = get_application_address(app_id)
-    txn2 = PaymentTxn(sender, params, app_address, 101000, None)
+    txn2 = PaymentTxn(sender, params, app_address, 101000)
     # sign_send_wait_transaction(client, txn2, private_key)
 
     gid = calculate_group_id([txn, txn2])
@@ -95,8 +95,8 @@ def main():
 
     init_escrow_asc1(client, owner_private_key, app_id, asset_id)
 
-    buyer_private_key = test2_private_key
-    buy(client, buyer_private_key, app_id, asset_id, owner_address)
+    # buyer_private_key = test2_private_key
+    # buy(client, buyer_private_key, app_id, asset_id, owner_address)
 
 
 if __name__ == '__main__':
