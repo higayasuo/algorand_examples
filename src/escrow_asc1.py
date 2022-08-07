@@ -1,20 +1,37 @@
-from pyteal import (Approve, Reject, Cond,
-                    Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global, Btoi,
-                    TealType, If, Subroutine, TxnType, Gtxn, InnerTxnBuilder,
-                    TxnField)
 from algosdk.future.transaction import StateSchema
+from pyteal import (
+    App,
+    Approve,
+    Assert,
+    Btoi,
+    Bytes,
+    Cond,
+    Global,
+    Gtxn,
+    If,
+    InnerTxnBuilder,
+    Int,
+    OnComplete,
+    Reject,
+    Seq,
+    Subroutine,
+    TealType,
+    Txn,
+    TxnField,
+    TxnType,
+)
 
 
 class GlobalVariables:
-    owner = Bytes('owner')
-    asset_id = Bytes('asset_id')
-    amount = Bytes('amount')
-    debug = Bytes('debug')
+    owner = Bytes("owner")
+    asset_id = Bytes("asset_id")
+    amount = Bytes("amount")
+    debug = Bytes("debug")
 
 
 class AppMethods:
-    init = 'init'
-    buy = 'buy'
+    init = "init"
+    buy = "buy"
 
 
 class Constants:
@@ -31,7 +48,7 @@ def handle_creation():
         common_check_txn(Int(0)),
         Assert(Txn.application_args.length() == Int(0)),
         App.globalPut(GlobalVariables.owner, Global.creator_address()),
-        Approve()
+        Approve(),
     )
 
 
@@ -41,13 +58,12 @@ def common_check_txn(txn_index):
         Assert(txn_index < Global.group_size()),
         Assert(Gtxn[txn_index].rekey_to() == Global.zero_address()),
         Assert(Gtxn[txn_index].close_remainder_to() == Global.zero_address()),
-        Assert(Gtxn[txn_index].asset_close_to() == Global.zero_address())
+        Assert(Gtxn[txn_index].asset_close_to() == Global.zero_address()),
     )
 
 
 def init():
-    amount_ex = App.globalGetEx(
-        Int(0), GlobalVariables.amount)
+    amount_ex = App.globalGetEx(Int(0), GlobalVariables.amount)
     amount = Btoi(Txn.application_args[1])
 
     return Seq(
@@ -65,21 +81,32 @@ def init():
         Assert(Gtxn[1].receiver() == Global.current_application_address()),
         App.globalPut(GlobalVariables.asset_id, Txn.assets[0]),
         App.globalPut(GlobalVariables.amount, amount),
-        Approve()
+        Approve(),
     )
 
 
 @Subroutine(TealType.none)
-def check_application_call():
+def check_opt_in(tx_index, buyer):
     return Seq(
-        Assert(Gtxn[0].type_enum() == TxnType.ApplicationCall),
-        Assert(Gtxn[0].application_args.length() == Int(1)),
-        Assert(Gtxn[0].application_args[0] == Bytes(AppMethods.buy)),
+        Assert(Gtxn[tx_index].type_enum() == TxnType.AssetTransfer),
+        # App.globalPut(GlobalVariables.debug, Gtxn[tx_index].asset_sender()),
+        # Assert(Gtxn[tx_index].asset_sender() == buyer),
+        # Assert(Gtxn[tx_index].asset_receiver() == buyer),
+        Assert(Gtxn[tx_index].asset_amount() == Int(0)),
     )
 
 
 @Subroutine(TealType.none)
-def check_payment(owner, amount):
+def check_buy_call(tx_index):
+    return Seq(
+        Assert(Gtxn[tx_index].type_enum() == TxnType.ApplicationCall),
+        Assert(Gtxn[tx_index].application_args.length() == Int(1)),
+        Assert(Gtxn[tx_index].application_args[0] == Bytes(AppMethods.buy)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_buy_payment(owner, amount):
     return Seq(
         Assert(Gtxn[1].type_enum() == TxnType.Payment),
         Assert(Gtxn[1].receiver == owner),
@@ -88,25 +115,18 @@ def check_payment(owner, amount):
 
 
 @Subroutine(TealType.none)
-def check_buy_when_owner_is_creator(owner, buyer):
-    return Seq(
-        Assert(Global.group_size() == Int(1)),
-        Assert(owner != buyer),
-        check_application_call(),
-    )
-
-
-@Subroutine(TealType.none)
 def transfor_asset(owner, buyer, asset_id):
     return Seq(
         InnerTxnBuilder.Begin(),
-        InnerTxnBuilder.SetFields({
-            TxnField.type_enum: TxnType.AssetTransfer,
-            TxnField.asset_sender: owner,
-            TxnField.asset_receiver: buyer,
-            TxnField.xfer_asset: asset_id,
-            TxnField.asset_amount: Int(1),
-        }),
+        InnerTxnBuilder.SetFields(
+            {
+                TxnField.type_enum: TxnType.AssetTransfer,
+                TxnField.asset_sender: owner,
+                TxnField.asset_receiver: buyer,
+                TxnField.xfer_asset: asset_id,
+                TxnField.asset_amount: Int(1),
+            }
+        ),
         InnerTxnBuilder.Submit(),
     )
 
@@ -115,17 +135,19 @@ def transfor_asset(owner, buyer, asset_id):
 def buy_when_owner_is_creator(owner, asset_id):
     buyer = Gtxn[0].sender()
     return Seq(
-        check_buy_when_owner_is_creator(owner, buyer),
-        transfor_asset(owner, buyer, asset_id),
+        Assert(Global.group_size() == Int(2)),
+        common_check_txn(Int(0)),
+        common_check_txn(Int(1)),
+        Assert(owner != buyer),
+        check_opt_in(Int(0), buyer),
+        check_buy_call(Int(1)),
+        # transfor_asset(owner, buyer, asset_id),
     )
 
 
 @Subroutine(TealType.none)
 def buy_when_owner_is_not_creator():
-    return Seq(
-        App.globalPut(
-            GlobalVariables.debug, Bytes('Buy from ownner'))
-    )
+    return Seq(App.globalPut(GlobalVariables.debug, Bytes("Buy from ownner")))
 
 
 def buy():
@@ -136,9 +158,10 @@ def buy():
 
     return Seq(
         Assert(amount > Int(0)),
-        If(creator == owner).Then(buy_when_owner_is_creator(owner, asset_id)).Else(
-            buy_when_owner_is_not_creator()),
-        Approve()
+        If(creator == owner)
+        .Then(buy_when_owner_is_creator(owner, asset_id))
+        .Else(buy_when_owner_is_not_creator()),
+        Approve(),
     )
 
 
@@ -146,11 +169,8 @@ def handle_noop():
     return Seq(
         # Assert(Global.group_size() == Int(1)),
         Cond(
-            [Txn.application_args[0] == Bytes(
-                AppMethods.init), init()],
-            [Txn.application_args[0] == Bytes(
-                AppMethods.buy), buy()],
-
+            [Txn.application_args[0] == Bytes(AppMethods.init), init()],
+            [Txn.application_args[0] == Bytes(AppMethods.buy), buy()],
         )
     )
 
@@ -162,7 +182,7 @@ def approval_program():
         [Txn.on_completion() == OnComplete.OptIn, Reject()],
         [Txn.on_completion() == OnComplete.CloseOut, Reject()],
         [Txn.on_completion() == OnComplete.UpdateApplication, Reject()],
-        [Txn.on_completion() == OnComplete.DeleteApplication, Reject()]
+        [Txn.on_completion() == OnComplete.DeleteApplication, Reject()],
     )
 
 
@@ -174,5 +194,5 @@ def main():
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

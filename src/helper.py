@@ -1,7 +1,7 @@
 from base64 import b64decode
 
 from algosdk.future.transaction import (
-    SignedTransaction, AssetConfigTxn, wait_for_confirmation, OnComplete, ApplicationCreateTxn, ApplicationNoOpTxn, StateSchema)
+    Transaction, SignedTransaction, AssetConfigTxn, wait_for_confirmation, OnComplete, ApplicationCreateTxn, ApplicationNoOpTxn, StateSchema)
 from algosdk.account import address_from_private_key
 from algosdk.v2client.algod import AlgodClient
 from algosdk.encoding import encode_address
@@ -41,7 +41,15 @@ def send_wait_transaction(client: AlgodClient, signed_txns: list[SignedTransacti
         return
 
 
-def sign_send_wait_transaction(client: AlgodClient, txn, private_key: str):
+def sign_send_wait_transaction(client: AlgodClient, txn: Transaction, private_key: str):
+    signed_txn = txn.sign(private_key)
+
+    return send_wait_transaction(client, [signed_txn])
+
+
+def sign_send_wait_group_transactions(client: AlgodClient,
+                                      txns: list[Transaction],
+                                      private_keys: list[str]):
     signed_txn = txn.sign(private_key)
 
     return send_wait_transaction(client, [signed_txn])
