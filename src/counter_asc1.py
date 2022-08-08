@@ -1,9 +1,28 @@
-from pyteal import (Approve, Reject, Mode, compileTeal, Cond, If,
-                    Txn, OnComplete, Int, App, Bytes, Seq, Assert, Global,
-                    ScratchVar, TealType)
+from pyteal import (
+    Approve,
+    Reject,
+    Mode,
+    compileTeal,
+    Cond,
+    If,
+    Txn,
+    OnComplete,
+    Int,
+    App,
+    Bytes,
+    Seq,
+    Assert,
+    Global,
+)
 from algosdk.future import transaction
 
-from helper import create_algod_client, compile_smart_contract, create_app, call_app, read_global_state
+from helper import (
+    create_algod_client,
+    compile_smart_contract,
+    create_app,
+    call_app,
+    read_global_state,
+)
 
 
 class GlobalVariables:
@@ -11,8 +30,8 @@ class GlobalVariables:
 
 
 class AppMethods:
-    add = 'add'
-    subtract = 'subtract'
+    add = "add"
+    subtract = "subtract"
 
 
 global_schema = transaction.StateSchema(1, 0)
@@ -20,29 +39,25 @@ local_schema = transaction.StateSchema(0, 0)
 
 
 def handle_creation():
-    return Seq(
-        App.globalPut(GlobalVariables.count, Int(0)),
-        Approve()
-    )
+    return Seq(App.globalPut(GlobalVariables.count, Int(0)), Approve())
 
 
 def add():
-    scratchCount = ScratchVar(TealType.uint64)
+    count = App.globalGet(GlobalVariables.count)
     return Seq(
-        scratchCount.store(App.globalGet(GlobalVariables.count)),
-        App.globalPut(GlobalVariables.count, scratchCount.load() + Int(1)),
-        Approve()
+        App.globalPut(GlobalVariables.count, count + Int(1)),
+        Approve(),
     )
 
 
 def subtract():
-    scratchCount = ScratchVar(TealType.uint64)
+    count = App.globalGet(GlobalVariables.count)
     return Seq(
-        scratchCount.store(App.globalGet(GlobalVariables.count)),
-        If(scratchCount.load() > Int(0),
-            App.globalPut(GlobalVariables.count, scratchCount.load() - Int(1)),
-           ),
-        Approve()
+        If(
+            count > Int(0),
+            App.globalPut(GlobalVariables.count, count - Int(1)),
+        ),
+        Approve(),
     )
 
 
@@ -51,8 +66,8 @@ def handle_noop():
         Assert(Global.group_size() == Int(1)),
         Cond(
             [Txn.application_args[0] == Bytes(AppMethods.add), add()],
-            [Txn.application_args[0] == Bytes(AppMethods.subtract), subtract()]
-        )
+            [Txn.application_args[0] == Bytes(AppMethods.subtract), subtract()],
+        ),
     )
 
 
@@ -63,7 +78,7 @@ def approval_program():
         [Txn.on_completion() == OnComplete.OptIn, Reject()],
         [Txn.on_completion() == OnComplete.CloseOut, Reject()],
         [Txn.on_completion() == OnComplete.UpdateApplication, Reject()],
-        [Txn.on_completion() == OnComplete.DeleteApplication, Reject()]
+        [Txn.on_completion() == OnComplete.DeleteApplication, Reject()],
     )
 
 
@@ -76,29 +91,26 @@ def main():
 
     client = create_algod_client()
 
-    approval_teal = compileTeal(
-        approval_program(), Mode.Application, version=6)
+    approval_teal = compileTeal(approval_program(), Mode.Application, version=6)
     approval = compile_smart_contract(client, approval_teal)
 
-    clear_teal = compileTeal(
-        clear_state_program(), Mode.Application, version=6)
+    clear_teal = compileTeal(clear_state_program(), Mode.Application, version=6)
     clear = compile_smart_contract(client, clear_teal)
 
-    app_id = create_app(client, private_key, approval,
-                        clear, global_schema, local_schema)
+    app_id = create_app(
+        client, private_key, approval, clear, global_schema, local_schema
+    )
 
     print(read_global_state(client, app_id))
 
     app_args = [AppMethods.add]
-    print('Call:', AppMethods.add)
     call_app(client, private_key, app_id, app_args)
     print(read_global_state(client, app_id))
 
     app_args = [AppMethods.subtract]
-    print('Call:', AppMethods.subtract)
     call_app(client, private_key, app_id, app_args)
     print(read_global_state(client, app_id))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
