@@ -32,7 +32,7 @@ def create_asset(client: AlgodClient, private_key: str, escrow_address: str):
         total=1,
         decimals=0,
         default_frozen=True,
-        unit_name="TEST",
+        unit_name="ASA",
         asset_name="ASA",
         manager=sender,
         reserve=sender,
