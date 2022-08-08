@@ -1,20 +1,24 @@
 from algosdk.future.transaction import PaymentTxn, calculate_group_id
 
-from helper import (create_algod_client, send_wait_transaction)
+from helper import (
+    create_algod_client,
+    send_wait_transaction,
+    sign_send_wait_group_transactions,
+)
+from accounts import (
+    test1_address,
+    test1_private_key,
+    test2_address,
+    test2_private_key,
+)
 
 
 def main():
-    from accounts import (test1_address,
-                          test1_private_key,
-                          test2_address,
-                          test2_private_key,
-                          test3_address)
-
     client = create_algod_client()
     params = client.suggested_params()
 
     tx1 = PaymentTxn(test1_address, params, test2_address, 1000)
-    tx2 = PaymentTxn(test2_address, params, test3_address, 1000)
+    tx2 = PaymentTxn(test2_address, params, test1_address, 1000)
 
     gid = calculate_group_id([tx1, tx2])
     tx1.group = gid
@@ -26,5 +30,17 @@ def main():
     send_wait_transaction(client, [stx1, stx2])
 
 
-if __name__ == '__main__':
-    main()
+def main2():
+    client = create_algod_client()
+    params = client.suggested_params()
+
+    tx1 = PaymentTxn(test1_address, params, test2_address, 1000)
+    tx2 = PaymentTxn(test2_address, params, test1_address, 1000)
+
+    sign_send_wait_group_transactions(
+        client, [tx1, tx2], [test1_private_key, test2_private_key]
+    )
+
+
+if __name__ == "__main__":
+    main2()

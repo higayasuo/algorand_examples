@@ -157,5 +157,5 @@ def approval_program16():
 
 
 if __name__ == "__main__":
-    teal = compileTeal(approval_program16(), Mode.Application, version=6)
+    teal = compileTeal(approval_program(), Mode.Application, version=6)
     print(teal)
