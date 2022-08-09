@@ -1,6 +1,5 @@
 from pyteal import (
     Approve,
-    Reject,
     Mode,
     compileTeal,
     Cond,
@@ -13,8 +12,11 @@ from pyteal import (
     Seq,
     Assert,
     Global,
+    Expr,
 )
-from algosdk.future import transaction
+from algosdk.future.transaction import StateSchema, ApplicationDeleteTxn
+from algosdk.v2client.algod import AlgodClient
+from algosdk.account import address_from_private_key
 
 from helper import (
     create_algod_client,
@@ -22,6 +24,7 @@ from helper import (
     create_app,
     call_app,
     read_global_state,
+    sign_send_wait_transaction,
 )
 
 
@@ -34,15 +37,15 @@ class AppMethods:
     subtract = "subtract"
 
 
-global_schema = transaction.StateSchema(1, 0)
-local_schema = transaction.StateSchema(0, 0)
+global_schema = StateSchema(1, 0)
+local_schema = StateSchema(0, 0)
 
 
-def handle_creation():
+def handle_creation() -> Expr:
     return Seq(App.globalPut(GlobalVariables.count, Int(0)), Approve())
 
 
-def add():
+def add() -> Expr:
     count = App.globalGet(GlobalVariables.count)
     return Seq(
         App.globalPut(GlobalVariables.count, count + Int(1)),
@@ -50,7 +53,7 @@ def add():
     )
 
 
-def subtract():
+def subtract() -> Expr:
     count = App.globalGet(GlobalVariables.count)
     return Seq(
         If(
@@ -61,7 +64,7 @@ def subtract():
     )
 
 
-def handle_noop():
+def handle_noop() -> Expr:
     return Seq(
         Assert(Global.group_size() == Int(1)),
         Cond(
@@ -71,19 +74,29 @@ def handle_noop():
     )
 
 
-def approval_program():
+def approval_program() -> Expr:
     return Cond(
         [Txn.application_id() == Int(0), handle_creation()],
         [Txn.on_completion() == OnComplete.NoOp, handle_noop()],
-        [Txn.on_completion() == OnComplete.OptIn, Reject()],
-        [Txn.on_completion() == OnComplete.CloseOut, Reject()],
-        [Txn.on_completion() == OnComplete.UpdateApplication, Reject()],
-        [Txn.on_completion() == OnComplete.DeleteApplication, Reject()],
+        [Txn.on_completion() == OnComplete.ClearState, Approve()],
+        [Txn.on_completion() == OnComplete.CloseOut, Approve()],
+        [Txn.on_completion() == OnComplete.DeleteApplication, Approve()],
+        [Txn.on_completion() == OnComplete.OptIn, Approve()],
+        [Txn.on_completion() == OnComplete.UpdateApplication, Approve()],
     )
 
 
-def clear_state_program():
+def clear_state_program() -> Expr:
     return Approve()
+
+
+def delete_app(client: AlgodClient, private_key: str, app_id: int) -> None:
+    print("delete_app")
+    sender = address_from_private_key(private_key)
+    params = client.suggested_params()
+
+    txn = ApplicationDeleteTxn(sender, params, index=app_id)
+    sign_send_wait_transaction(client, txn, private_key)
 
 
 def main():
@@ -110,6 +123,8 @@ def main():
     app_args = [AppMethods.subtract]
     call_app(client, private_key, app_id, app_args)
     print(read_global_state(client, app_id))
+
+    delete_app(client, private_key, app_id)
 
 
 if __name__ == "__main__":

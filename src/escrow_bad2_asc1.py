@@ -12,7 +12,6 @@ from pyteal import (
     Txn,
     TxnField,
     TxnType,
-    Expr,
 )
 
 
@@ -24,7 +23,7 @@ global_schema = StateSchema(0, 0)
 local_schema = StateSchema(0, 0)
 
 
-def handle_creation() -> Expr:
+def handle_creation():
     return Seq(
         Approve(),
     )
@@ -37,7 +36,7 @@ def transfer_asset_txn():
         InnerTxnBuilder.SetFields(
             {
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.asset_sender: Txn.accounts[1],
+                TxnField.asset_sender: Txn.application_args[1],
                 TxnField.asset_receiver: Txn.sender(),
                 TxnField.xfer_asset: Txn.assets[0],
                 TxnField.asset_amount: Int(1),
@@ -47,14 +46,14 @@ def transfer_asset_txn():
     )
 
 
-def transfer_asset() -> Expr:
+def transfer_asset():
     return Seq(
         transfer_asset_txn(),
         Approve(),
     )
 
 
-def handle_noop() -> Expr:
+def handle_noop():
     return Seq(
         Cond(
             [
@@ -65,7 +64,7 @@ def handle_noop() -> Expr:
     )
 
 
-def approval_program() -> Expr:
+def approval_program():
     return Cond(
         [Txn.application_id() == Int(0), handle_creation()],
         [Txn.on_completion() == OnComplete.NoOp, handle_noop()],
@@ -77,11 +76,11 @@ def approval_program() -> Expr:
     )
 
 
-def clear_state_program() -> Expr:
+def clear_state_program():
     return Approve()
 
 
-def main() -> None:
+def main():
     pass
 
 

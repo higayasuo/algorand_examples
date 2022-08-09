@@ -3,43 +3,73 @@ from pyteal import (
     Approve,
     Bytes,
     Cond,
+    Gtxn,
     InnerTxnBuilder,
     Int,
     OnComplete,
+    Reject,
     Seq,
     Subroutine,
     TealType,
     Txn,
     TxnField,
     TxnType,
-    Expr,
 )
 
 
+class GlobalVariables:
+    owner = Bytes("owner")
+    asset_id = Bytes("asset_id")
+    amount = Bytes("amount")
+    debug = Bytes("debug")
+
+
 class AppMethods:
-    transfer_asset = "transfer_asset"
+    init = "init"
+    buy = "buy"
 
 
-global_schema = StateSchema(0, 0)
+class Constants:
+    royalty = Int(1000)
+
+
+global_schema = StateSchema(2, 2)
 local_schema = StateSchema(0, 0)
 
 
-def handle_creation() -> Expr:
+def handle_creation():
     return Seq(
         Approve(),
     )
 
 
 @Subroutine(TealType.none)
-def transfer_asset_txn():
+def opt_in():
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
             {
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.asset_sender: Txn.accounts[1],
-                TxnField.asset_receiver: Txn.sender(),
-                TxnField.xfer_asset: Txn.assets[0],
+                TxnField.asset_sender: Gtxn[0].sender(),
+                TxnField.asset_receiver: Gtxn[0].sender(),
+                TxnField.xfer_asset: Gtxn[0].assets[0],
+                TxnField.asset_amount: Int(0),
+            }
+        ),
+        InnerTxnBuilder.Submit(),
+    )
+
+
+@Subroutine(TealType.none)
+def transfer_asset():
+    return Seq(
+        InnerTxnBuilder.Begin(),
+        InnerTxnBuilder.SetFields(
+            {
+                TxnField.type_enum: TxnType.AssetTransfer,
+                TxnField.asset_sender: Gtxn[0].accounts[1],
+                TxnField.asset_receiver: Gtxn[0].sender(),
+                TxnField.xfer_asset: Gtxn[0].assets[0],
                 TxnField.asset_amount: Int(1),
             }
         ),
@@ -47,25 +77,23 @@ def transfer_asset_txn():
     )
 
 
-def transfer_asset() -> Expr:
+def buy():
     return Seq(
-        transfer_asset_txn(),
+        opt_in(),
+        transfer_asset(),
         Approve(),
     )
 
 
-def handle_noop() -> Expr:
+def handle_noop():
     return Seq(
         Cond(
-            [
-                Txn.application_args[0] == Bytes(AppMethods.transfer_asset),
-                transfer_asset(),
-            ],
+            [Txn.application_args[0] == Bytes(AppMethods.buy), buy()],
         )
     )
 
 
-def approval_program() -> Expr:
+def approval_program():
     return Cond(
         [Txn.application_id() == Int(0), handle_creation()],
         [Txn.on_completion() == OnComplete.NoOp, handle_noop()],
@@ -77,11 +105,11 @@ def approval_program() -> Expr:
     )
 
 
-def clear_state_program() -> Expr:
+def clear_state_program():
     return Approve()
 
 
-def main() -> None:
+def main():
     pass
 
 

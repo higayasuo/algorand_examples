@@ -145,7 +145,7 @@ def create_app(
     local_schema: StateSchema,
     foreign_assets: list[int] = None,
     app_args: list[bytes] = None,
-):
+) -> int:
     sender = address_from_private_key(private_key)
     on_complete = OnComplete.NoOpOC.real
     params = client.suggested_params()
