@@ -8,6 +8,7 @@ from algosdk.future.transaction import (
     OnComplete,
     ApplicationCreateTxn,
     ApplicationNoOpTxn,
+    ApplicationDeleteTxn,
     StateSchema,
     calculate_group_id,
 )
@@ -195,6 +196,17 @@ def call_app(
 
     print("Sender:", sender)
     print("Application called:", app_id, app_args)
+
+
+def delete_app(client: AlgodClient, private_key: str, app_id: int) -> None:
+    sender = address_from_private_key(private_key)
+    params = client.suggested_params()
+
+    txn = ApplicationDeleteTxn(sender, params, index=app_id)
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Deleted Application ID:", app_id)
 
 
 def format_b64bytes(val: bytes):

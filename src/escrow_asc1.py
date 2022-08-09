@@ -13,6 +13,8 @@ from pyteal import (
     TxnField,
     TxnType,
     Expr,
+    compileTeal,
+    Mode,
 )
 
 
@@ -24,9 +26,47 @@ global_schema = StateSchema(0, 0)
 local_schema = StateSchema(0, 0)
 
 
-def handle_creation() -> Expr:
-    return Seq(
+def approval_program() -> str:
+    program = Seq(
+        Cond(
+            [Txn.application_id() == Int(0), create()],
+            [Txn.on_completion() == OnComplete.NoOp, no_op()],
+            [Txn.on_completion() == OnComplete.ClearState, Approve()],
+            [Txn.on_completion() == OnComplete.CloseOut, Approve()],
+            [Txn.on_completion() == OnComplete.DeleteApplication, Approve()],
+            [Txn.on_completion() == OnComplete.OptIn, Approve()],
+            [Txn.on_completion() == OnComplete.UpdateApplication, Approve()],
+        ),
         Approve(),
+    )
+    return compileTeal(program, Mode.Application, version=6)
+
+
+def clear_state_program() -> str:
+    return compileTeal(Approve(), Mode.Application, version=6)
+
+
+@Subroutine(TealType.none)
+def create():
+    return Seq()
+
+
+@Subroutine(TealType.none)
+def no_op():
+    return (
+        Cond(
+            [
+                Txn.application_args[0] == Bytes(AppMethods.transfer_asset),
+                transfer_asset(),
+            ],
+        ),
+    )
+
+
+@Subroutine(TealType.none)
+def transfer_asset():
+    return Seq(
+        transfer_asset_txn(),
     )
 
 
@@ -45,45 +85,3 @@ def transfer_asset_txn():
         ),
         InnerTxnBuilder.Submit(),
     )
-
-
-def transfer_asset() -> Expr:
-    return Seq(
-        transfer_asset_txn(),
-        Approve(),
-    )
-
-
-def handle_noop() -> Expr:
-    return Seq(
-        Cond(
-            [
-                Txn.application_args[0] == Bytes(AppMethods.transfer_asset),
-                transfer_asset(),
-            ],
-        )
-    )
-
-
-def approval_program() -> Expr:
-    return Cond(
-        [Txn.application_id() == Int(0), handle_creation()],
-        [Txn.on_completion() == OnComplete.NoOp, handle_noop()],
-        [Txn.on_completion() == OnComplete.ClearState, Approve()],
-        [Txn.on_completion() == OnComplete.CloseOut, Approve()],
-        [Txn.on_completion() == OnComplete.DeleteApplication, Approve()],
-        [Txn.on_completion() == OnComplete.OptIn, Approve()],
-        [Txn.on_completion() == OnComplete.UpdateApplication, Approve()],
-    )
-
-
-def clear_state_program() -> Expr:
-    return Approve()
-
-
-def main() -> None:
-    pass
-
-
-if __name__ == "__main__":
-    main()

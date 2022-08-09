@@ -62,7 +62,8 @@ def handle_noop():
                 Txn.application_args[0] == Bytes(AppMethods.transfer_asset),
                 transfer_asset(),
             ],
-        )
+        ),
+        Approve(),
     )
 
 

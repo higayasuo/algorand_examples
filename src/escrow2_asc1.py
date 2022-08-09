@@ -12,18 +12,25 @@ from pyteal import (
     Txn,
     TxnField,
     TxnType,
+    Expr,
 )
 
 
+class GlobalVariables:
+    asset_id = Bytes("asset_id")
+    price = Bytes("price")
+
+
 class AppMethods:
+    init = "init"
     transfer_asset = "transfer_asset"
 
 
-global_schema = StateSchema(0, 0)
+global_schema = StateSchema(2, 0)
 local_schema = StateSchema(0, 0)
 
 
-def handle_creation():
+def handle_creation() -> Expr:
     return Seq(
         Approve(),
     )
@@ -36,7 +43,7 @@ def transfer_asset_txn():
         InnerTxnBuilder.SetFields(
             {
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.asset_sender: Txn.application_args[1],
+                TxnField.asset_sender: Txn.accounts[1],
                 TxnField.asset_receiver: Txn.sender(),
                 TxnField.xfer_asset: Txn.assets[0],
                 TxnField.asset_amount: Int(1),
@@ -46,16 +53,20 @@ def transfer_asset_txn():
     )
 
 
-def transfer_asset():
+def transfer_asset() -> Expr:
     return Seq(
         transfer_asset_txn(),
         Approve(),
     )
 
 
-def handle_noop():
+def handle_noop() -> Expr:
     return Seq(
         Cond(
+            [
+                Txn.application_args[0] == Bytes(AppMethods.init),
+                init(),
+            ],
             [
                 Txn.application_args[0] == Bytes(AppMethods.transfer_asset),
                 transfer_asset(),
@@ -65,7 +76,7 @@ def handle_noop():
     )
 
 
-def approval_program():
+def approval_program() -> Expr:
     return Cond(
         [Txn.application_id() == Int(0), handle_creation()],
         [Txn.on_completion() == OnComplete.NoOp, handle_noop()],
@@ -77,11 +88,11 @@ def approval_program():
     )
 
 
-def clear_state_program():
+def clear_state_program() -> Expr:
     return Approve()
 
 
-def main():
+def main() -> None:
     pass
 
 
