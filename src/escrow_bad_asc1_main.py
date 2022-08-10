@@ -1,17 +1,14 @@
 from algosdk.v2client.algod import AlgodClient
 from algosdk.account import address_from_private_key
 from algosdk.future.transaction import (
-    AssetTransferTxn,
     AssetOptInTxn,
-    AssetDestroyTxn,
     ApplicationNoOpTxn,
+    AssetTransferTxn,
+    AssetDestroyTxn,
     ApplicationDeleteTxn,
     PaymentTxn,
 )
 from algosdk.logic import get_application_address
-from algosdk.encoding import decode_address
-
-from pyteal import compileTeal, Mode
 
 import helper
 
@@ -20,30 +17,29 @@ from helper import (
     sign_send_wait_group_transactions,
     compile_smart_contract,
     create_app,
-    sign_send_wait_transaction,
+    fund,
 )
 from accounts import test1_private_key, test1_address, test2_private_key
-import escrow_bad2_asc1 as escrow_asc1
+from escrow_bad_asc1 import (
+    approval_program,
+    clear_state_program,
+    global_schema,
+    local_schema,
+    AppMethods,
+)
 
 
 def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
-    approval_teal = compileTeal(
-        escrow_asc1.approval_program(), Mode.Application, version=6
-    )
-    approval = compile_smart_contract(client, approval_teal)
-
-    clear_teal = compileTeal(
-        escrow_asc1.clear_state_program(), Mode.Application, version=6
-    )
-    clear = compile_smart_contract(client, clear_teal)
+    approval = compile_smart_contract(client, approval_program())
+    clear = compile_smart_contract(client, clear_state_program())
 
     app_id = create_app(
         client,
         private_key,
         approval,
         clear,
-        escrow_asc1.global_schema,
-        escrow_asc1.local_schema,
+        global_schema,
+        local_schema,
     )
     app_address = get_application_address(app_id)
     print("Application Address:", app_address)
@@ -51,18 +47,7 @@ def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
     return app_id, app_address
 
 
-def fund(
-    client: AlgodClient, private_key: str, receiver: str | bytes, amt: int
-) -> None:
-    print("fund")
-    sender = address_from_private_key(private_key)
-    params = client.suggested_params()
-
-    txn = PaymentTxn(sender, params, receiver=receiver, amt=amt)
-    sign_send_wait_transaction(client, txn, private_key)
-
-
-def create_asset(client: AlgodClient, private_key: str, clawback: str):
+def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
     sender = address_from_private_key(private_key)
 
     return helper.create_asset(
@@ -92,13 +77,13 @@ def opt_in_transfer_asset_fund(
     params = client.suggested_params()
 
     txn1 = AssetOptInTxn(sender=sender, sp=params, index=asset_id)
-    app_args = [escrow_asc1.AppMethods.transfer_asset, decode_address(asset_sender)]
+    app_args = [AppMethods.transfer_asset, asset_id]
     txn2 = ApplicationNoOpTxn(
         sender,
         params,
         app_id,
         app_args,
-        foreign_assets=[asset_id],
+        accounts=[asset_sender],
     )
     txn3 = PaymentTxn(sender, params, receiver=asset_sender, amt=1000000)
     sign_send_wait_group_transactions(
@@ -106,14 +91,14 @@ def opt_in_transfer_asset_fund(
     )
 
 
-def return_destroy_asset_refund_delete_app(
+def return_destroy_asset_delete_app_refund(
     client: AlgodClient,
     sender_private_key: str,
     destroyer_private_key: str,
     asset_id: int,
     app_id: int,
 ) -> None:
-    print("return_destroy_asset_refund_delete_app")
+    print("return_destroy_asset_delete_app_refund")
     sender = address_from_private_key(sender_private_key)
     destroyer = address_from_private_key(destroyer_private_key)
     params = client.suggested_params()
@@ -131,12 +116,12 @@ def return_destroy_asset_refund_delete_app(
         sp=params,
         index=asset_id,
     )
-    txn3 = PaymentTxn(destroyer, params, receiver=sender, amt=1000000)
-    txn4 = ApplicationDeleteTxn(
+    txn3 = ApplicationDeleteTxn(
         sender=destroyer,
         sp=params,
         index=app_id,
     )
+    txn4 = PaymentTxn(destroyer, params, receiver=sender, amt=1000000)
     sign_send_wait_group_transactions(
         client,
         [txn1, txn2, txn3, txn4],
@@ -153,8 +138,8 @@ def main():
     client = create_algod_client()
 
     app_id, escrow_address = create_escrow_asc1(client, test1_private_key)
-    fund(client, test1_private_key, receiver=escrow_address, amt=101000)
     asset_id = create_asset(client, test1_private_key, escrow_address)
+    fund(client, test1_private_key, receiver=escrow_address, amt=101000)
 
     opt_in_transfer_asset_fund(
         client,
@@ -164,7 +149,7 @@ def main():
         asset_id=asset_id,
     )
 
-    return_destroy_asset_refund_delete_app(
+    return_destroy_asset_delete_app_refund(
         client,
         sender_private_key=test2_private_key,
         destroyer_private_key=test1_private_key,

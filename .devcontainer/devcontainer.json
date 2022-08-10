@@ -45,7 +45,8 @@
     //   "--check-untyped-defs"
     // ],
     "[python]": {
-      "editor.tabSize": 4
+      "editor.tabSize": 4,
+      "editor.formatOnPaste": false
     }
   },
   // Add the IDs of extensions you want installed when the container is created.
