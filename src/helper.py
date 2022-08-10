@@ -1,4 +1,5 @@
 from base64 import b64decode
+from typing import Any
 
 from algosdk.future.transaction import (
     Transaction,
@@ -9,6 +10,7 @@ from algosdk.future.transaction import (
     ApplicationCreateTxn,
     ApplicationNoOpTxn,
     ApplicationDeleteTxn,
+    PaymentTxn,
     StateSchema,
     calculate_group_id,
 )
@@ -30,12 +32,9 @@ def compile_smart_contract(client: AlgodClient, source_code: str) -> bytes:
     return b64decode(compile_response["result"])
 
 
-def compile_smart_signature(client: AlgodClient, source_code: str) -> tuple[str, str]:
-    compile_response = client.compile(source_code)
-    return compile_response["result"], compile_response["hash"]
-
-
-def send_wait_transaction(client: AlgodClient, signed_txns: list[SignedTransaction]):
+def send_wait_transaction(
+    client: AlgodClient, signed_txns: list[SignedTransaction]
+) -> Any:
     tx_id = client.send_transactions(signed_txns)
 
     try:
@@ -53,14 +52,16 @@ def send_wait_transaction(client: AlgodClient, signed_txns: list[SignedTransacti
         return
 
 
-def sign_send_wait_transaction(client: AlgodClient, txn: Transaction, private_key: str):
+def sign_send_wait_transaction(
+    client: AlgodClient, txn: Transaction, private_key: str
+) -> Any:
     signed_txn = txn.sign(private_key)
     return send_wait_transaction(client, [signed_txn])
 
 
 def sign_send_wait_group_transactions(
     client: AlgodClient, txns: list[Transaction], private_keys: list[str]
-):
+) -> Any:
     gid = calculate_group_id(txns)
     stxns: list[SignedTransaction] = []
     for i, txn in enumerate(txns):
@@ -209,7 +210,19 @@ def delete_app(client: AlgodClient, private_key: str, app_id: int) -> None:
     print("Deleted Application ID:", app_id)
 
 
-def format_b64bytes(val: bytes):
+def fund(client: AlgodClient, private_key: str, receiver: str, amt: int) -> None:
+    sender = address_from_private_key(private_key)
+    params = client.suggested_params()
+
+    txn = PaymentTxn(sender, params, receiver=receiver, amt=amt)
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Receiver:", receiver)
+    print("Payment Amount:", amt)
+
+
+def format_b64bytes(val: bytes) -> str | bytes:
     formatted_value = b64decode(val)
 
     try:
@@ -223,7 +236,7 @@ def format_b64bytes(val: bytes):
     return formatted_value
 
 
-def format_state(state):
+def format_state(state) -> dict[str, Any]:
     formatted = {}
     for item in state:
         key = item["key"]
@@ -239,7 +252,7 @@ def format_state(state):
     return formatted
 
 
-def read_global_state(client: AlgodClient, app_id: int):
+def read_global_state(client: AlgodClient, app_id: int) -> dict[str, Any]:
     app_info = client.application_info(app_id)
     global_state = (
         app_info["params"]["global-state"]
@@ -247,17 +260,3 @@ def read_global_state(client: AlgodClient, app_id: int):
         else []
     )
     return format_state(global_state)
-
-
-def main():
-    from pyteal import compileTeal, Approve, Mode
-
-    client = create_algod_client()
-    teal = compileTeal(Approve(), Mode.Signature)
-
-    prog, addr = compile_smart_signature(client, teal)
-    print(prog, addr)
-
-
-if __name__ == "__main__":
-    main()

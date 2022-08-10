@@ -57,9 +57,11 @@ def create():
 
 @Subroutine(TealType.none)
 def no_op():
-    return Cond(
-        [Txn.application_args[0] == Bytes(AppMethods.add), add()],
-        [Txn.application_args[0] == Bytes(AppMethods.subtract), subtract()],
+    return Seq(
+        Cond(
+            [Txn.application_args[0] == Bytes(AppMethods.add), add()],
+            [Txn.application_args[0] == Bytes(AppMethods.subtract), subtract()],
+        )
     )
 
 

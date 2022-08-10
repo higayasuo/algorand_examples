@@ -12,7 +12,6 @@ from pyteal import (
     Txn,
     TxnField,
     TxnType,
-    Expr,
     compileTeal,
     Mode,
 )
@@ -53,7 +52,7 @@ def create():
 
 @Subroutine(TealType.none)
 def no_op():
-    return (
+    return Seq(
         Cond(
             [
                 Txn.application_args[0] == Bytes(AppMethods.transfer_asset),
