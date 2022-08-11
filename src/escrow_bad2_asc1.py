@@ -86,3 +86,11 @@ def transfer_asset():
     return Seq(
         transfer_asset_txn(),
     )
+
+
+def main():
+    print(approval_program())
+
+
+if __name__ == "__main__":
+    main()

@@ -82,3 +82,11 @@ def subtract() -> Expr:
             App.globalPut(GlobalVariables.count, count - Int(1)),
         ),
     )
+
+
+def main():
+    print(approval_program())
+
+
+if __name__ == "__main__":
+    main()

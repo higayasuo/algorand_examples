@@ -84,3 +84,11 @@ def transfer_asset_txn():
         ),
         InnerTxnBuilder.Submit(),
     )
+
+
+def main():
+    print(approval_program())
+
+
+if __name__ == "__main__":
+    main()
