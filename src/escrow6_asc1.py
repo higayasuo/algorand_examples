@@ -92,10 +92,20 @@ def init():
 def check_init():
     asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
     return Seq(
+        check_zero_addresses(Int(0)),
         asset_id_ex,
         Assert(asset_id_ex.hasValue() == Int(0)),
         Assert(Txn.application_args.length() == Int(2)),
         Assert(Txn.assets.length() == Int(1)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_zero_addresses(tx_id):
+    return Seq(
+        Assert(Gtxn[tx_id].rekey_to() == Global.zero_address()),
+        Assert(Gtxn[tx_id].close_remainder_to() == Global.zero_address()),
+        Assert(Gtxn[tx_id].asset_close_to() == Global.zero_address()),
     )
 
 
@@ -121,6 +131,7 @@ def check_transfer_asset():
 @Subroutine(TealType.none)
 def check_opt_in(tx_id):
     return Seq(
+        check_zero_addresses(tx_id),
         Assert(Gtxn[tx_id].type_enum() == TxnType.AssetTransfer),
         Assert(Gtxn[tx_id].asset_amount() == Int(0)),
     )
@@ -130,6 +141,7 @@ def check_opt_in(tx_id):
 def check_application_call(tx_id):
     asset_id = App.globalGet(GlobalVariables.asset_id)
     return Seq(
+        check_zero_addresses(tx_id),
         Assert(Gtxn[tx_id].type_enum() == TxnType.ApplicationCall),
         Assert(Gtxn[tx_id].application_args.length() == Int(1)),
         Assert(Gtxn[tx_id].accounts.length() == Int(1)),

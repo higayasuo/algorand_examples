@@ -92,10 +92,20 @@ def init():
 def check_init():
     asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
     return Seq(
+        check_zero_addresses(Int(0)),
         asset_id_ex,
         Assert(asset_id_ex.hasValue() == Int(0)),
         Assert(Txn.application_args.length() == Int(2)),
         Assert(Txn.assets.length() == Int(1)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_zero_addresses(tx_id):
+    return Seq(
+        Assert(Gtxn[tx_id].rekey_to() == Global.zero_address()),
+        Assert(Gtxn[tx_id].close_remainder_to() == Global.zero_address()),
+        Assert(Gtxn[tx_id].asset_close_to() == Global.zero_address()),
     )
 
 

@@ -17,8 +17,8 @@ from pyteal import (
     App,
     Btoi,
     Assert,
-    Gtxn,
     Global,
+    Gtxn,
 )
 
 
@@ -112,12 +112,58 @@ def check_zero_addresses(tx_id):
 @Subroutine(TealType.none)
 def transfer_asset():
     return Seq(
-        transfer_asset_txn(),
+        check_transfer_asset(),
+        asset_transfer_txn(),
     )
 
 
 @Subroutine(TealType.none)
-def transfer_asset_txn():
+def check_transfer_asset():
+    return Seq(
+        Assert(Global.group_size() == Int(3)),
+        Assert(Gtxn[0].sender() == Gtxn[1].sender()),
+        Assert(Gtxn[0].sender() == Gtxn[2].sender()),
+        check_opt_in(Int(0)),
+        check_application_call(Int(1)),
+        check_payment(Int(2)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_opt_in(tx_id):
+    return Seq(
+        check_zero_addresses(tx_id),
+        Assert(Gtxn[tx_id].type_enum() == TxnType.AssetTransfer),
+        Assert(Gtxn[tx_id].asset_amount() == Int(0)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_application_call(tx_id):
+    asset_id = App.globalGet(GlobalVariables.asset_id)
+    return Seq(
+        check_zero_addresses(tx_id),
+        Assert(Gtxn[tx_id].type_enum() == TxnType.ApplicationCall),
+        Assert(Gtxn[tx_id].application_args.length() == Int(1)),
+        Assert(Gtxn[tx_id].accounts.length() == Int(1)),
+        Assert(Gtxn[tx_id].assets.length() == Int(1)),
+        Assert(Gtxn[tx_id].assets[0] == asset_id),
+    )
+
+
+@Subroutine(TealType.none)
+def check_payment(tx_id):
+    price = App.globalGet(GlobalVariables.price)
+    return Seq(
+        check_zero_addresses(tx_id),
+        Assert(Gtxn[tx_id].type_enum() == TxnType.Payment),
+        Assert(Gtxn[tx_id].amount() == price),
+        Assert(Gtxn[tx_id].receiver() == Gtxn[tx_id - Int(1)].accounts[1]),
+    )
+
+
+@Subroutine(TealType.none)
+def asset_transfer_txn():
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
