@@ -5,6 +5,9 @@ from algosdk.future.transaction import (
     Transaction,
     SignedTransaction,
     AssetConfigTxn,
+    AssetOptInTxn,
+    AssetTransferTxn,
+    AssetDestroyTxn,
     wait_for_confirmation,
     OnComplete,
     ApplicationCreateTxn,
@@ -102,8 +105,9 @@ def create_asset(
     txn_res = sign_send_wait_transaction(client, txn, private_key)
 
     asset_id = txn_res["asset-index"]
+    print("create_asset()")
     print("Sender:", sender)
-    print("Created Asset ID:", asset_id)
+    print("Asset ID:", asset_id)
 
     return asset_id
 
@@ -117,6 +121,7 @@ def change_asset(
     freeze: str = None,
     clawback: str = None,
 ) -> None:
+    print("change_asset()")
     sender = address_from_private_key(private_key)
     sp = client.suggested_params()
 
@@ -131,11 +136,90 @@ def change_asset(
     sign_send_wait_transaction(client, txn, private_key)
 
     print("Sender:", sender)
-    print("Updated Asset ID:", asset_id)
+    print("Asset ID:", asset_id)
     print("Manager:", manager)
     print("Reserve:", reserve)
     print("Freeze:", freeze)
     print("Clawback:", clawback)
+
+
+def opt_in_asset(client: AlgodClient, private_key: str, asset_id: int) -> None:
+    print("opt_in_asset()")
+    sender = address_from_private_key(private_key)
+    sp = client.suggested_params()
+
+    txn = AssetOptInTxn(sender, sp, asset_id)
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Asset ID:", asset_id)
+
+
+def transfer_asset(
+    client: AlgodClient,
+    private_key: str,
+    receiver: str,
+    asset_id: int,
+    amt: int = 1,
+) -> None:
+    print("transfer_asset()")
+    sender = address_from_private_key(private_key)
+    sp = client.suggested_params()
+
+    txn = AssetTransferTxn(
+        sender=sender,
+        sp=sp,
+        receiver=receiver,
+        index=asset_id,
+        amt=amt,
+    )
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Receiver:", receiver)
+    print("Asset ID:", asset_id)
+    print("amount:", amt)
+
+
+def revoke_asset(
+    client: AlgodClient,
+    private_key: str,
+    revocation_target: str,
+    receiver: str,
+    asset_id: int,
+    amt: int = 1,
+) -> None:
+    print("revoke_asset()")
+    sender = address_from_private_key(private_key)
+    sp = client.suggested_params()
+
+    txn = AssetTransferTxn(
+        sender=sender,
+        sp=sp,
+        revocation_target=revocation_target,
+        receiver=receiver,
+        index=asset_id,
+        amt=amt,
+    )
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Revocation Target:", revocation_target)
+    print("Receiver:", receiver)
+    print("Asset ID:", asset_id)
+    print("amount:", amt)
+
+
+def destroy_asset(client: AlgodClient, private_key: str, asset_id: int) -> None:
+    print("destroy_asset()")
+    sender = address_from_private_key(private_key)
+    sp = client.suggested_params()
+
+    txn = AssetDestroyTxn(sender, sp, asset_id)
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Asset ID:", asset_id)
 
 
 def create_app(
@@ -148,13 +232,14 @@ def create_app(
     foreign_assets: list[int] = None,
     app_args: list[bytes] = None,
 ) -> tuple[int, str]:
+    print("create_app()")
     sender = address_from_private_key(private_key)
     on_complete = OnComplete.NoOpOC.real
-    params = client.suggested_params()
+    sp = client.suggested_params()
 
     txn = ApplicationCreateTxn(
         sender,
-        params,
+        sp,
         on_complete,
         approval_program,
         clear_program,
@@ -168,7 +253,7 @@ def create_app(
     app_id = txn_res["application-index"]
 
     print("Sender:", sender)
-    print("Created Application ID:", app_id)
+    print("Application ID:", app_id)
 
     return app_id
 
@@ -180,13 +265,14 @@ def call_app(
     app_args: list[bytes] = None,
     foreign_assets: list[int] = None,
     accounts: list[int] = None,
-):
+) -> None:
+    print("call_app()")
     sender = address_from_private_key(private_key)
-    params = client.suggested_params()
+    sp = client.suggested_params()
 
     txn = ApplicationNoOpTxn(
         sender,
-        params,
+        sp,
         app_id,
         app_args,
         foreign_assets=foreign_assets,
@@ -196,30 +282,33 @@ def call_app(
     sign_send_wait_transaction(client, txn, private_key)
 
     print("Sender:", sender)
-    print("Application called:", app_id, app_args)
+    print("Application ID:", app_id)
+    print("Application Args:", app_args)
 
 
 def delete_app(client: AlgodClient, private_key: str, app_id: int) -> None:
+    print("delete_app()")
     sender = address_from_private_key(private_key)
-    params = client.suggested_params()
+    sp = client.suggested_params()
 
-    txn = ApplicationDeleteTxn(sender, params, index=app_id)
+    txn = ApplicationDeleteTxn(sender, sp, index=app_id)
     sign_send_wait_transaction(client, txn, private_key)
 
     print("Sender:", sender)
-    print("Deleted Application ID:", app_id)
+    print("Application ID:", app_id)
 
 
 def fund(client: AlgodClient, private_key: str, receiver: str, amt: int) -> None:
+    print("fund()")
     sender = address_from_private_key(private_key)
-    params = client.suggested_params()
+    sp = client.suggested_params()
 
-    txn = PaymentTxn(sender, params, receiver=receiver, amt=amt)
+    txn = PaymentTxn(sender, sp, receiver=receiver, amt=amt)
     sign_send_wait_transaction(client, txn, private_key)
 
     print("Sender:", sender)
     print("Receiver:", receiver)
-    print("Payment Amount:", amt)
+    print("Amount:", amt)
 
 
 def format_b64bytes(val: bytes) -> str | bytes:

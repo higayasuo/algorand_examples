@@ -156,6 +156,16 @@ def approval_program16():
     )
 
 
+def approval_program17():
+    flag_ex = App.globalGetEx(Int(0), Bytes("flag"))
+    return Seq(
+        flag_ex,
+        Assert(flag_ex.hasValue() == 0),
+        App.globalPut(Bytes("flag"), Int(1)),
+        Approve(),
+    )
+
+
 if __name__ == "__main__":
     teal = compileTeal(approval_program(), Mode.Application, version=6)
     print(teal)

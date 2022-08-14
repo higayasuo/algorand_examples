@@ -26,6 +26,11 @@
     "python.formatting.provider": "black",
     "python.linting.lintOnSave": true,
     "editor.formatOnSave": true,
+    // "python.analysis.diagnosticSeverityOverrides": {
+    //   "reportUnusedImport": "warning",
+    //   "reportUnusedVariable": "warning",
+    //   "reportUnusedClass": "warning"
+    // },
     // "editor.codeActionsOnSave": {
     //     "source.organizeImports": true
     // },

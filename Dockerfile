@@ -16,7 +16,7 @@ USER vscode
 RUN echo "export PROMPT_DIRTRIM=2" >> ~/.bashrc
 RUN echo 'export PS1="\w$ "' >> ~/.bashrc
 
-RUN echo "export PYTHONPATH=/app/src:$PYTHONPATH" >> ~/.bashrc
+# RUN echo "export PYTHONPATH=/app/src:$PYTHONPATH" >> ~/.bashrc
 
 RUN echo "set editing-mode emacs" >> ~/.inputrc
 RUN echo "set completion-ignore-case off" >> ~/.inputrc
