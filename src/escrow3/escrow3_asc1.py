@@ -19,6 +19,7 @@ from pyteal import (
     Assert,
     Gtxn,
     Global,
+    AssetParam,
 )
 
 
@@ -91,21 +92,30 @@ def init():
 @Subroutine(TealType.none)
 def check_init():
     asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
+    clawback_ex = AssetParam.clawback(Txn.assets[0])
+    defaultFrozen_ex = AssetParam.defaultFrozen(Txn.assets[0])
     return Seq(
         check_zero_addresses(Int(0)),
         asset_id_ex,
         Assert(asset_id_ex.hasValue() == Int(0)),
         Assert(Txn.application_args.length() == Int(2)),
         Assert(Txn.assets.length() == Int(1)),
+        Assert(Txn.sender() == Global.creator_address()),
+        clawback_ex,
+        Assert(clawback_ex.hasValue() == Int(1)),
+        Assert(clawback_ex.value() == Global.current_application_address()),
+        defaultFrozen_ex,
+        Assert(defaultFrozen_ex.hasValue() == Int(1)),
+        Assert(defaultFrozen_ex.value() == Int(1)),
     )
 
 
 @Subroutine(TealType.none)
-def check_zero_addresses(tx_id):
+def check_zero_addresses(tx_index):
     return Seq(
-        Assert(Gtxn[tx_id].rekey_to() == Global.zero_address()),
-        Assert(Gtxn[tx_id].close_remainder_to() == Global.zero_address()),
-        Assert(Gtxn[tx_id].asset_close_to() == Global.zero_address()),
+        Assert(Gtxn[tx_index].rekey_to() == Global.zero_address()),
+        Assert(Gtxn[tx_index].close_remainder_to() == Global.zero_address()),
+        Assert(Gtxn[tx_index].asset_close_to() == Global.zero_address()),
     )
 
 
