@@ -1,7 +1,14 @@
 from algosdk.v2client.algod import AlgodClient
 from algosdk.account import address_from_private_key
 from algosdk.logic import get_application_address
-from algosdk.future.transaction import PaymentTxn, AssetOptInTxn, ApplicationNoOpTxn
+from algosdk.future.transaction import (
+    PaymentTxn,
+    AssetOptInTxn,
+    ApplicationNoOpTxn,
+    AssetTransferTxn,
+    AssetDestroyTxn,
+    ApplicationDeleteTxn,
+)
 
 import helper
 
@@ -88,6 +95,65 @@ def buy(
     )
 
 
+def reset(
+    client: AlgodClient,
+    seller_private_key: str,
+    buyer_private_key: str,
+    app_id: int,
+    asset_id: int,
+) -> None:
+    print("reset()")
+    seller = address_from_private_key(seller_private_key)
+    buyer = address_from_private_key(buyer_private_key)
+    sp = client.suggested_params()
+
+    txn1 = ApplicationNoOpTxn(
+        seller,
+        sp,
+        index=app_id,
+        app_args=[AppMethods.transfer_asset],
+        foreign_assets=[asset_id],
+        accounts=[buyer],
+    )
+    txn2 = AssetTransferTxn(
+        buyer,
+        sp,
+        index=asset_id,
+        receiver=seller,
+        close_assets_to=seller,
+        amt=0,
+    )
+    txn3 = AssetDestroyTxn(seller, sp, index=asset_id)
+    txn4 = ApplicationDeleteTxn(seller, sp, index=app_id)
+    txn5 = PaymentTxn(seller, sp, receiver=buyer, amt=1000000)
+    sign_send_wait_group_transactions(
+        client,
+        [txn1, txn2, txn3, txn4, txn5],
+        [
+            seller_private_key,
+            buyer_private_key,
+            seller_private_key,
+            seller_private_key,
+            seller_private_key,
+        ],
+    )
+
+    # call_app(
+    #     client,
+    #     test1_private_key,
+    #     app_id,
+    #     app_args=[AppMethods.transfer_asset],
+    #     foreign_assets=[asset_id],
+    #     accounts=[test2_address],
+    # )
+    # opt_out_asset(
+    #     client, test2_private_key, asset_id=asset_id, close_assets_to=test1_address
+    # )
+    # destroy_asset(client, test1_private_key, asset_id)
+    # delete_app(client, test1_private_key, app_id)
+    # fund(client, test1_private_key, receiver=test2_address, amt=1000000)
+
+
 def main():
     client = create_algod_client()
 
@@ -102,21 +168,9 @@ def main():
         app_id=app_id,
         asset_id=asset_id,
     )
-
-    call_app(
-        client,
-        test1_private_key,
-        app_id,
-        app_args=[AppMethods.transfer_asset],
-        foreign_assets=[asset_id],
-        accounts=[test2_address],
+    reset(
+        client, test1_private_key, test2_private_key, app_id=app_id, asset_id=asset_id
     )
-    opt_out_asset(
-        client, test2_private_key, asset_id=asset_id, close_assets_to=test1_address
-    )
-    destroy_asset(client, test1_private_key, asset_id)
-    delete_app(client, test1_private_key, app_id)
-    fund(client, test1_private_key, receiver=test2_address, amt=1000000)
 
 
 if __name__ == "__main__":
