@@ -8,9 +8,11 @@ from helper import (
     create_algod_client,
     compile_smart_contract,
     create_app,
+    delete_app,
     opt_in_asset,
     call_app,
     fund,
+    destroy_asset,
 )
 from accounts import test1_private_key, test1_address, test2_private_key
 from escrow_asc1 import (
@@ -20,6 +22,7 @@ from escrow_asc1 import (
     local_schema,
     AppMethods,
 )
+from utils import print_red
 
 
 def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
@@ -63,17 +66,23 @@ def main():
 
     app_id, escrow_address = create_escrow_asc1(client, test1_private_key)
     asset_id = create_asset(client, test1_private_key, escrow_address)
-    fund(client, test1_private_key, receiver=escrow_address, amt=1000)
 
-    opt_in_asset(client, test2_private_key, asset_id)
-    call_app(
-        client,
-        test2_private_key,
-        app_id,
-        app_args=[AppMethods.transfer_asset],
-        foreign_assets=[asset_id],
-        accounts=[test1_address],
-    )
+    try:
+        fund(client, test1_private_key, receiver=escrow_address, amt=1000)
+        opt_in_asset(client, test2_private_key, asset_id)
+        call_app(
+            client,
+            test2_private_key,
+            app_id,
+            app_args=[AppMethods.transfer_asset],
+            foreign_assets=[asset_id],
+            accounts=[test1_address],
+        )
+    except Exception as e:
+        print_red(f"Exception: {e}")
+    finally:
+        destroy_asset(client, test1_private_key, asset_id=asset_id)
+        delete_app(client, test1_private_key, app_id=app_id)
 
 
 if __name__ == "__main__":

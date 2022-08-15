@@ -138,21 +138,6 @@ def reset(
         ],
     )
 
-    # call_app(
-    #     client,
-    #     test1_private_key,
-    #     app_id,
-    #     app_args=[AppMethods.transfer_asset],
-    #     foreign_assets=[asset_id],
-    #     accounts=[test2_address],
-    # )
-    # opt_out_asset(
-    #     client, test2_private_key, asset_id=asset_id, close_assets_to=test1_address
-    # )
-    # destroy_asset(client, test1_private_key, asset_id)
-    # delete_app(client, test1_private_key, app_id)
-    # fund(client, test1_private_key, receiver=test2_address, amt=1000000)
-
 
 def main():
     client = create_algod_client()

@@ -27,6 +27,7 @@ from escrow_bad_asc1 import (
     local_schema,
     AppMethods,
 )
+from utils import print_red
 
 
 def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
@@ -106,7 +107,7 @@ def main():
             asset_id=asset_id,
         )
     except Exception as e:
-        print("Exception:", e)
+        print_red(f"Exception: {e}")
     finally:
         destroy_asset(client, test1_private_key, asset_id=asset_id)
         delete_app(client, test1_private_key, app_id=app_id)
