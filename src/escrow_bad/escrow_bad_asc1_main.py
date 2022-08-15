@@ -3,9 +3,6 @@ from algosdk.account import address_from_private_key
 from algosdk.future.transaction import (
     AssetOptInTxn,
     ApplicationNoOpTxn,
-    AssetTransferTxn,
-    AssetDestroyTxn,
-    ApplicationDeleteTxn,
     PaymentTxn,
 )
 from algosdk.logic import get_application_address
@@ -14,9 +11,12 @@ import helper
 
 from helper import (
     create_algod_client,
+    delete_app,
     sign_send_wait_group_transactions,
     compile_smart_contract,
     create_app,
+    delete_app,
+    destroy_asset,
     fund,
 )
 from accounts import test1_private_key, test1_address, test2_private_key
@@ -97,13 +97,19 @@ def main():
     asset_id = create_asset(client, test1_private_key, escrow_address)
     fund(client, test1_private_key, receiver=escrow_address, amt=101000)
 
-    buy(
-        client,
-        test2_private_key,
-        asset_sender=test1_address,
-        app_id=app_id,
-        asset_id=asset_id,
-    )
+    try:
+        buy(
+            client,
+            test2_private_key,
+            asset_sender=test1_address,
+            app_id=app_id,
+            asset_id=asset_id,
+        )
+    except Exception as e:
+        print("Exception:", e)
+    finally:
+        destroy_asset(client, test1_private_key, asset_id=asset_id)
+        delete_app(client, test1_private_key, app_id=app_id)
 
 
 if __name__ == "__main__":
