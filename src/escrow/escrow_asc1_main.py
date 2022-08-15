@@ -1,18 +1,15 @@
 from algosdk.v2client.algod import AlgodClient
 from algosdk.account import address_from_private_key
-from algosdk.future.transaction import (
-    AssetOptInTxn,
-    ApplicationNoOpTxn,
-)
 from algosdk.logic import get_application_address
 
 import helper
 
 from helper import (
     create_algod_client,
-    sign_send_wait_group_transactions,
     compile_smart_contract,
     create_app,
+    opt_in_asset,
+    call_app,
 )
 from accounts import test1_private_key, test1_address, test2_private_key
 from escrow_asc1 import (
@@ -50,7 +47,7 @@ def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
         private_key,
         total=1,
         decimals=0,
-        default_frozen=False,
+        default_frozen=True,
         unit_name="ASA",
         asset_name="ASA",
         manager=sender,
@@ -60,42 +57,20 @@ def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
     )
 
 
-def opt_in_transfer_asset(
-    client: AlgodClient,
-    private_key: str,
-    asset_sender: str,
-    app_id: int,
-    asset_id: int,
-) -> None:
-    print("opt_in_transfer_asset")
-    sender = address_from_private_key(private_key)
-    params = client.suggested_params()
-
-    txn1 = AssetOptInTxn(sender=sender, sp=params, index=asset_id)
-    app_args = [AppMethods.transfer_asset]
-    txn2 = ApplicationNoOpTxn(
-        sender,
-        params,
-        app_id,
-        app_args,
-        foreign_assets=[asset_id],
-        accounts=[asset_sender],
-    )
-    sign_send_wait_group_transactions(client, [txn1, txn2], [private_key, private_key])
-
-
 def main():
     client = create_algod_client()
 
     app_id, escrow_address = create_escrow_asc1(client, test1_private_key)
     asset_id = create_asset(client, test1_private_key, escrow_address)
 
-    opt_in_transfer_asset(
+    opt_in_asset(client, test2_private_key, asset_id)
+    call_app(
         client,
         test2_private_key,
-        asset_sender=test1_address,
-        app_id=app_id,
-        asset_id=asset_id,
+        app_id,
+        app_args=[AppMethods.transfer_asset],
+        foreign_assets=[asset_id],
+        accounts=[test1_address],
     )
 
 

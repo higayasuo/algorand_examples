@@ -1,24 +1,21 @@
 from algosdk.v2client.algod import AlgodClient
 from algosdk.account import address_from_private_key
-from algosdk.future.transaction import (
-    AssetOptInTxn,
-    ApplicationNoOpTxn,
-    AssetTransferTxn,
-    AssetDestroyTxn,
-    ApplicationDeleteTxn,
-)
 from algosdk.logic import get_application_address
 
 import helper
 
 from helper import (
     create_algod_client,
-    sign_send_wait_group_transactions,
     compile_smart_contract,
     create_app,
+    delete_app,
+    opt_in_asset,
+    opt_out_asset,
+    destroy_asset,
+    call_app,
     fund,
 )
-from accounts import test1_private_key, test1_address, test2_private_key
+from accounts import test1_private_key, test1_address, test2_private_key, test2_address
 from escrow_asc1 import (
     approval_program,
     clear_state_program,
@@ -54,7 +51,7 @@ def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
         private_key,
         total=1,
         decimals=0,
-        default_frozen=False,
+        default_frozen=True,
         unit_name="ASA",
         asset_name="ASA",
         manager=sender,
@@ -64,89 +61,36 @@ def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
     )
 
 
-def opt_in_transfer_asset(
-    client: AlgodClient,
-    private_key: str,
-    asset_sender: str,
-    app_id: int,
-    asset_id: int,
-) -> None:
-    print("opt_in_transfer_asset")
-    sender = address_from_private_key(private_key)
-    params = client.suggested_params()
-
-    txn1 = AssetOptInTxn(sender=sender, sp=params, index=asset_id)
-    app_args = [AppMethods.transfer_asset]
-    txn2 = ApplicationNoOpTxn(
-        sender,
-        params,
-        app_id,
-        app_args,
-        foreign_assets=[asset_id],
-        accounts=[asset_sender],
-    )
-    sign_send_wait_group_transactions(client, [txn1, txn2], [private_key, private_key])
-
-
-def return_destroy_asset_delete_app(
-    client: AlgodClient,
-    sender_private_key: str,
-    destroyer_private_key: str,
-    asset_id: int,
-    app_id: int,
-) -> None:
-    print("return_destroy_asset_delete_app")
-    sender = address_from_private_key(sender_private_key)
-    destroyer = address_from_private_key(destroyer_private_key)
-    params = client.suggested_params()
-
-    txn1 = AssetTransferTxn(
-        sender=sender,
-        sp=params,
-        receiver=destroyer,
-        amt=1,
-        index=asset_id,
-        close_assets_to=destroyer,
-    )
-    txn2 = AssetDestroyTxn(
-        sender=destroyer,
-        sp=params,
-        index=asset_id,
-    )
-    txn3 = ApplicationDeleteTxn(
-        sender=destroyer,
-        sp=params,
-        index=app_id,
-    )
-    sign_send_wait_group_transactions(
-        client,
-        [txn1, txn2, txn3],
-        [sender_private_key, destroyer_private_key, destroyer_private_key],
-    )
-
-
 def main():
     client = create_algod_client()
 
     app_id, escrow_address = create_escrow_asc1(client, test1_private_key)
     asset_id = create_asset(client, test1_private_key, escrow_address)
-    fund(client, test1_private_key, receiver=escrow_address, amt=101000)
+    fund(client, test1_private_key, receiver=escrow_address, amt=102000)
 
-    opt_in_transfer_asset(
+    opt_in_asset(client, test2_private_key, asset_id)
+    call_app(
         client,
         test2_private_key,
-        asset_sender=test1_address,
-        app_id=app_id,
-        asset_id=asset_id,
+        app_id,
+        app_args=[AppMethods.transfer_asset],
+        foreign_assets=[asset_id],
+        accounts=[test1_address],
     )
 
-    return_destroy_asset_delete_app(
+    call_app(
         client,
-        sender_private_key=test2_private_key,
-        destroyer_private_key=test1_private_key,
-        asset_id=asset_id,
-        app_id=app_id,
+        test1_private_key,
+        app_id,
+        app_args=[AppMethods.transfer_asset],
+        foreign_assets=[asset_id],
+        accounts=[test2_address],
     )
+    opt_out_asset(
+        client, test2_private_key, asset_id=asset_id, close_assets_to=test1_address
+    )
+    destroy_asset(client, test1_private_key, asset_id)
+    delete_app(client, test1_private_key, app_id)
 
 
 if __name__ == "__main__":

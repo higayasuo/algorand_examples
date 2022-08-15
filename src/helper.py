@@ -155,6 +155,27 @@ def opt_in_asset(client: AlgodClient, private_key: str, asset_id: int) -> None:
     print("Asset ID:", asset_id)
 
 
+def opt_out_asset(
+    client: AlgodClient, private_key: str, asset_id: int, close_assets_to: str
+) -> None:
+    print("opt_out_asset()")
+    sender = address_from_private_key(private_key)
+    sp = client.suggested_params()
+
+    txn = AssetTransferTxn(
+        sender,
+        sp,
+        index=asset_id,
+        receiver=close_assets_to,
+        close_assets_to=close_assets_to,
+        amt=0,
+    )
+    sign_send_wait_transaction(client, txn, private_key)
+
+    print("Sender:", sender)
+    print("Asset ID:", asset_id)
+
+
 def transfer_asset(
     client: AlgodClient,
     private_key: str,
