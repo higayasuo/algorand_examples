@@ -16,6 +16,7 @@ from pyteal import (
     Mode,
     App,
     Btoi,
+    Expr,
 )
 
 
@@ -54,12 +55,12 @@ def clear_state_program() -> str:
 
 
 @Subroutine(TealType.none)
-def create():
+def create() -> Expr:
     return Seq()
 
 
 @Subroutine(TealType.none)
-def no_op():
+def no_op() -> Expr:
     return Seq(
         Cond(
             [
@@ -75,7 +76,7 @@ def no_op():
 
 
 @Subroutine(TealType.none)
-def init():
+def init() -> Expr:
     asset_id = Txn.assets[0]
     price = Btoi(Txn.application_args[1])
     return Seq(
@@ -85,14 +86,14 @@ def init():
 
 
 @Subroutine(TealType.none)
-def transfer_asset():
+def transfer_asset() -> Expr:
     return Seq(
         transfer_asset_txn(),
     )
 
 
 @Subroutine(TealType.none)
-def transfer_asset_txn():
+def transfer_asset_txn() -> Expr:
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
@@ -108,7 +109,7 @@ def transfer_asset_txn():
     )
 
 
-def main():
+def main() -> None:
     print(approval_program())
 
 
