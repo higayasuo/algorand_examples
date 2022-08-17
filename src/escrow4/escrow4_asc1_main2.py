@@ -1,11 +1,7 @@
 from algosdk.v2client.algod import AlgodClient
 from algosdk.account import address_from_private_key
 from algosdk.future.transaction import (
-    AssetOptInTxn,
     ApplicationNoOpTxn,
-    AssetTransferTxn,
-    AssetDestroyTxn,
-    ApplicationDeleteTxn,
     PaymentTxn,
 )
 from algosdk.logic import get_application_address
@@ -14,12 +10,14 @@ import helper
 
 from helper import (
     create_algod_client,
+    delete_app,
     sign_send_wait_group_transactions,
     compile_smart_contract,
     create_app,
     read_global_state,
+    destroy_asset,
 )
-from accounts import test1_private_key, test1_address, test2_private_key
+from accounts import test1_private_key
 from escrow4_asc1 import (
     approval_program,
     clear_state_program,
@@ -27,6 +25,7 @@ from escrow4_asc1 import (
     local_schema,
     AppMethods,
 )
+from utils import print_red
 
 
 def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple[int, str]:
@@ -90,77 +89,6 @@ def init_app(
     print(read_global_state(client, app_id))
 
 
-def buy(
-    client: AlgodClient,
-    private_key: str,
-    asset_sender: bytes | str,
-    app_id: int,
-    asset_id: int,
-) -> None:
-    print("buy()")
-    sender = address_from_private_key(private_key)
-    params = client.suggested_params()
-
-    txn1 = AssetOptInTxn(sender=sender, sp=params, index=asset_id)
-    app_args = [AppMethods.transfer_asset]
-    txn2 = ApplicationNoOpTxn(
-        sender,
-        params,
-        app_id,
-        app_args,
-        foreign_assets=[asset_id],
-        accounts=[asset_sender],
-    )
-    txn3 = PaymentTxn(sender, params, receiver=asset_sender, amt=1000000)
-    sign_send_wait_group_transactions(
-        client, [txn1, txn2, txn3], [private_key, private_key, private_key]
-    )
-
-
-def reset(
-    client: AlgodClient,
-    seller_private_key: str,
-    buyer_private_key: str,
-    app_id: int,
-    asset_id: int,
-) -> None:
-    print("reset()")
-    seller = address_from_private_key(seller_private_key)
-    buyer = address_from_private_key(buyer_private_key)
-    sp = client.suggested_params()
-
-    txn1 = ApplicationNoOpTxn(
-        seller,
-        sp,
-        index=app_id,
-        app_args=[AppMethods.transfer_asset],
-        foreign_assets=[asset_id],
-        accounts=[buyer],
-    )
-    txn2 = AssetTransferTxn(
-        buyer,
-        sp,
-        index=asset_id,
-        receiver=seller,
-        close_assets_to=seller,
-        amt=0,
-    )
-    txn3 = AssetDestroyTxn(seller, sp, index=asset_id)
-    txn4 = ApplicationDeleteTxn(seller, sp, index=app_id)
-    txn5 = PaymentTxn(seller, sp, receiver=buyer, amt=1000000)
-    sign_send_wait_group_transactions(
-        client,
-        [txn1, txn2, txn3, txn4, txn5],
-        [
-            seller_private_key,
-            buyer_private_key,
-            seller_private_key,
-            seller_private_key,
-            seller_private_key,
-        ],
-    )
-
-
 def main() -> None:
     client = create_algod_client()
 
@@ -174,17 +102,19 @@ def main() -> None:
         asset_id=asset_id,
     )
 
-    buy(
-        client,
-        test2_private_key,
-        asset_sender=test1_address,
-        app_id=app_id,
-        asset_id=asset_id,
-    )
-
-    reset(
-        client, test1_private_key, test2_private_key, app_id=app_id, asset_id=asset_id
-    )
+    try:
+        init_app(
+            client,
+            test1_private_key,
+            app_id=app_id,
+            escrow_address=escrow_address,
+            asset_id=asset_id,
+        )
+    except Exception as e:
+        print_red(f"Exception: {e}")
+    finally:
+        destroy_asset(client, test1_private_key, asset_id=asset_id)
+        delete_app(client, test1_private_key, app_id=app_id)
 
 
 if __name__ == "__main__":
