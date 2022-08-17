@@ -4,10 +4,10 @@
   // "python.linting.mypyEnabled": true,
   // "python.linting.enabled": true,
   // "python.linting.prospectorEnabled": false,
-  "python.languageServer": "Pylance",
+  //"python.languageServer": "Pylance",
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": false,
-  "python.linting.flake8Enabled": false,
+  "python.linting.flake8Enabled": true,
   "python.linting.mypyEnabled": true,
   "python.formatting.provider": "black",
   "python.linting.lintOnSave": true,
@@ -20,6 +20,9 @@
     "reportUnknownMemberType": "none",
     "reportGeneralTypeIssues": "none"
   },
+  "python.linting.flake8Args": [
+    "--max-line-length=89"
+  ],
   "python.linting.mypyArgs": [
     "--show-error-codes",
     "--strict",

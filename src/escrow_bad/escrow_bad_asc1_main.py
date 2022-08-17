@@ -50,7 +50,7 @@ def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple[int, str]
 def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
     sender = address_from_private_key(private_key)
 
-    return helper.create_asset(
+    return helper.create_asset(  # type:ignore[no-any-return]
         client,
         private_key,
         total=1,
