@@ -14,6 +14,7 @@ from pyteal import (
     TxnField,
     TxnType,
     Mode,
+    Expr,
 )
 
 
@@ -46,14 +47,14 @@ def clear_state_program() -> str:
 
 
 @Subroutine(TealType.none)
-def create():
+def create() -> Expr:
     return Seq(
         Approve(),
     )
 
 
 @Subroutine(TealType.none)
-def no_op():
+def no_op() -> Expr:
     return Seq(
         Cond(
             [
@@ -65,7 +66,7 @@ def no_op():
 
 
 @Subroutine(TealType.none)
-def transfer_asset_txn():
+def transfer_asset_txn() -> Expr:
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
@@ -82,13 +83,13 @@ def transfer_asset_txn():
 
 
 @Subroutine(TealType.none)
-def transfer_asset():
+def transfer_asset() -> Expr:
     return Seq(
         transfer_asset_txn(),
     )
 
 
-def main():
+def main() -> None:
     print(approval_program())
 
 
