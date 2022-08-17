@@ -29,7 +29,7 @@ from escrow5_asc1 import (
 )
 
 
-def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
+def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple[int, str]:
     approval = compile_smart_contract(client, approval_program())
     clear = compile_smart_contract(client, clear_state_program())
 
@@ -162,7 +162,7 @@ def return_destroy_asset_delete_app_refund(
     )
 
 
-def main():
+def main() -> None:
     client = create_algod_client()
 
     app_id, escrow_address = create_escrow_asc1(client, test1_private_key)

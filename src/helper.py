@@ -1,5 +1,5 @@
 from base64 import b64decode
-from typing import Any
+from typing import Any, Optional, cast
 
 from algosdk.future.transaction import (
     Transaction,
@@ -32,20 +32,20 @@ def create_algod_client() -> AlgodClient:
 
 def compile_smart_contract(client: AlgodClient, source_code: str) -> bytes:
     compile_response = client.compile(source_code)
-    return b64decode(compile_response["result"])
+    return b64decode(cast(str, compile_response["result"]))
 
 
 def send_wait_transaction(
     client: AlgodClient, signed_txns: list[SignedTransaction]
 ) -> Any:
-    tx_id = client.send_transactions(signed_txns)
+    tx_id = cast(str, client.send_transactions(signed_txns))
 
     try:
         transaction_response = wait_for_confirmation(client, tx_id, 10)
         print("TXID: ", tx_id)
         print(
             "Result confirmed in round: {}".format(
-                transaction_response["confirmed-round"]
+                cast(int, transaction_response["confirmed-round"])
             )
         )
         return transaction_response
@@ -76,15 +76,15 @@ def sign_send_wait_group_transactions(
 def create_asset(
     client: AlgodClient,
     private_key: str,
-    total: int = None,
-    decimals: int = None,
-    default_frozen: bool = None,
-    unit_name: str = None,
-    asset_name: str = None,
-    manager: str = None,
-    reserve: str = None,
-    freeze: str = None,
-    clawback: str = None,
+    asset_name: str,
+    unit_name: str,
+    total: int,
+    decimals: int,
+    default_frozen: bool = False,
+    manager: Optional[str | bytes] = None,
+    reserve: Optional[str | bytes] = None,
+    freeze: Optional[str | bytes] = None,
+    clawback: Optional[str | bytes] = None,
 ) -> int:
     sender = address_from_private_key(private_key)
     sp = client.suggested_params()
@@ -104,7 +104,7 @@ def create_asset(
     )
     txn_res = sign_send_wait_transaction(client, txn, private_key)
 
-    asset_id = txn_res["asset-index"]
+    asset_id = int(txn_res["asset-index"])
     print("create_asset()")
     print("Sender:", sender)
     print("Asset ID:", asset_id)
@@ -116,10 +116,10 @@ def change_asset(
     client: AlgodClient,
     private_key: str,
     asset_id: int,
-    manager: str = None,
-    reserve: str = None,
-    freeze: str = None,
-    clawback: str = None,
+    manager: Optional[str | bytes],
+    reserve: Optional[str | bytes],
+    freeze: Optional[str | bytes],
+    clawback: Optional[str | bytes],
 ) -> None:
     print("change_asset()")
     sender = address_from_private_key(private_key)
@@ -250,9 +250,9 @@ def create_app(
     clear_program: bytes,
     global_schema: StateSchema,
     local_schema: StateSchema,
-    foreign_assets: list[int] = None,
-    app_args: list[bytes] = None,
-) -> tuple[int, str]:
+    foreign_assets: Optional[list[int]] = None,
+    app_args: Optional[list[bytes]] = None,
+) -> int:
     print("create_app()")
     sender = address_from_private_key(private_key)
     on_complete = OnComplete.NoOpOC.real
@@ -271,7 +271,7 @@ def create_app(
     )
 
     txn_res = sign_send_wait_transaction(client, txn, private_key)
-    app_id = txn_res["application-index"]
+    app_id = int(txn_res["application-index"])
 
     print("Sender:", sender)
     print("Application ID:", app_id)
@@ -283,9 +283,9 @@ def call_app(
     client: AlgodClient,
     private_key: str,
     app_id: int,
-    app_args: list[bytes] = None,
-    foreign_assets: list[int] = None,
-    accounts: list[int] = None,
+    app_args: list[bytes],
+    foreign_assets: Optional[list[int]] = None,
+    accounts: Optional[list[int]] = None,
 ) -> None:
     print("call_app()")
     sender = address_from_private_key(private_key)
@@ -339,20 +339,20 @@ def format_b64bytes(val: bytes) -> str | bytes:
         return formatted_value.decode("utf-8")
     except UnicodeDecodeError:
         try:
-            return encode_address(formatted_value)
+            return cast(str, encode_address(formatted_value))
         except Exception:
             pass
 
     return formatted_value
 
 
-def format_state(state) -> dict[str, Any]:
+def format_state(state: list[dict[str, Any]]) -> dict[str, Any]:
     formatted = {}
     for item in state:
         key = item["key"]
         value = item["value"]
         formatted_key = b64decode(key).decode("utf-8")
-        if value["type"] == 1:
+        if int(value["type"]) == 1:
             # byte string
             formatted_value = format_b64bytes(value["bytes"])
             formatted[formatted_key] = formatted_value
@@ -364,9 +364,12 @@ def format_state(state) -> dict[str, Any]:
 
 def read_global_state(client: AlgodClient, app_id: int) -> dict[str, Any]:
     app_info = client.application_info(app_id)
-    global_state = (
-        app_info["params"]["global-state"]
-        if "global-state" in app_info["params"]
-        else []
+    global_state = cast(
+        list[dict[str, Any]],
+        (
+            app_info["params"]["global-state"]
+            if "global-state" in app_info["params"]
+            else []
+        ),
     )
     return format_state(global_state)

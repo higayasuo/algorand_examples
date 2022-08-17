@@ -19,6 +19,7 @@ from pyteal import (
     Assert,
     Global,
     Gtxn,
+    Expr,
 )
 
 
@@ -57,12 +58,12 @@ def clear_state_program() -> str:
 
 
 @Subroutine(TealType.none)
-def create():
+def create() -> Expr:
     return Seq()
 
 
 @Subroutine(TealType.none)
-def no_op():
+def no_op() -> Expr:
     return Seq(
         Cond(
             [
@@ -78,7 +79,7 @@ def no_op():
 
 
 @Subroutine(TealType.none)
-def init():
+def init() -> Expr:
     asset_id = Txn.assets[0]
     price = Btoi(Txn.application_args[1])
     return Seq(
@@ -89,7 +90,7 @@ def init():
 
 
 @Subroutine(TealType.none)
-def check_init():
+def check_init() -> Expr:
     asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
     return Seq(
         check_zero_addresses(Int(0)),
@@ -101,16 +102,16 @@ def check_init():
 
 
 @Subroutine(TealType.none)
-def check_zero_addresses(tx_id):
+def check_zero_addresses(gtxn_index: Expr) -> Expr:
     return Seq(
-        Assert(Gtxn[tx_id].rekey_to() == Global.zero_address()),
-        Assert(Gtxn[tx_id].close_remainder_to() == Global.zero_address()),
-        Assert(Gtxn[tx_id].asset_close_to() == Global.zero_address()),
+        Assert(Gtxn[gtxn_index].rekey_to() == Global.zero_address()),
+        Assert(Gtxn[gtxn_index].close_remainder_to() == Global.zero_address()),
+        Assert(Gtxn[gtxn_index].asset_close_to() == Global.zero_address()),
     )
 
 
 @Subroutine(TealType.none)
-def transfer_asset():
+def transfer_asset() -> Expr:
     return Seq(
         check_transfer_asset(),
         asset_transfer_txn(),
@@ -118,7 +119,7 @@ def transfer_asset():
 
 
 @Subroutine(TealType.none)
-def check_transfer_asset():
+def check_transfer_asset() -> Expr:
     return Seq(
         Assert(Global.group_size() == Int(3)),
         Assert(Gtxn[0].sender() == Gtxn[1].sender()),
@@ -129,29 +130,29 @@ def check_transfer_asset():
 
 
 @Subroutine(TealType.none)
-def check_opt_in(tx_id):
+def check_opt_in(gtxn_index: Expr) -> Expr:
     return Seq(
-        check_zero_addresses(tx_id),
-        Assert(Gtxn[tx_id].type_enum() == TxnType.AssetTransfer),
-        Assert(Gtxn[tx_id].asset_amount() == Int(0)),
+        check_zero_addresses(gtxn_index),
+        Assert(Gtxn[gtxn_index].type_enum() == TxnType.AssetTransfer),
+        Assert(Gtxn[gtxn_index].asset_amount() == Int(0)),
     )
 
 
 @Subroutine(TealType.none)
-def check_application_call(tx_id):
+def check_application_call(gtxn_index: Expr) -> Expr:
     asset_id = App.globalGet(GlobalVariables.asset_id)
     return Seq(
-        check_zero_addresses(tx_id),
-        Assert(Gtxn[tx_id].type_enum() == TxnType.ApplicationCall),
-        Assert(Gtxn[tx_id].application_args.length() == Int(1)),
-        Assert(Gtxn[tx_id].accounts.length() == Int(1)),
-        Assert(Gtxn[tx_id].assets.length() == Int(1)),
-        Assert(Gtxn[tx_id].assets[0] == asset_id),
+        check_zero_addresses(gtxn_index),
+        Assert(Gtxn[gtxn_index].type_enum() == TxnType.ApplicationCall),
+        Assert(Gtxn[gtxn_index].application_args.length() == Int(1)),
+        Assert(Gtxn[gtxn_index].accounts.length() == Int(1)),
+        Assert(Gtxn[gtxn_index].assets.length() == Int(1)),
+        Assert(Gtxn[gtxn_index].assets[0] == asset_id),
     )
 
 
 @Subroutine(TealType.none)
-def asset_transfer_txn():
+def asset_transfer_txn() -> Expr:
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
@@ -167,7 +168,7 @@ def asset_transfer_txn():
     )
 
 
-def main():
+def main() -> None:
     print(approval_program())
 
 

@@ -20,7 +20,7 @@ from helper import (
     read_global_state,
 )
 from accounts import test1_private_key, test1_address, test2_private_key
-from escrow4_asc1 import (
+from escrow4.escrow4_asc1_old import (
     approval_program,
     clear_state_program,
     global_schema,
@@ -29,7 +29,7 @@ from escrow4_asc1 import (
 )
 
 
-def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
+def create_escrow_asc1(client: AlgodClient, private_key: str):
     approval = compile_smart_contract(client, approval_program())
     clear = compile_smart_contract(client, clear_state_program())
 

@@ -26,7 +26,7 @@ from escrow_asc1 import (
 )
 
 
-def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
+def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple[int, str]:
     approval = compile_smart_contract(client, approval_program())
     clear = compile_smart_contract(client, clear_state_program())
 

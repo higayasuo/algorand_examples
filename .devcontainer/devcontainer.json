@@ -19,40 +19,58 @@
   // Set *default* container specific settings.json values on container create.
   "settings": {
     // "python.defaultInterpreterPath": "/app/local/bin/python",
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": true,
-    "python.linting.mypyEnabled": true,
-    "python.formatting.provider": "black",
-    "python.linting.lintOnSave": true,
-    "editor.formatOnSave": true,
-    // "python.analysis.diagnosticSeverityOverrides": {
-    //   "reportUnusedImport": "warning",
-    //   "reportUnusedVariable": "warning",
-    //   "reportUnusedClass": "warning"
-    // },
-    // "editor.codeActionsOnSave": {
-    //     "source.organizeImports": true
-    // },
-    // "python.formatting.autopep8Path": "/usr/local/py-utils/bin/autopep8",
-    // "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
-    // "python.formatting.yapfPath": "/usr/local/py-utils/bin/yapf",
-    // "python.linting.banditPath": "/usr/local/py-utils/bin/bandit",
-    // "python.linting.flake8Path": "/usr/local/py-utils/bin/flake8",
-    // "python.linting.mypyPath": "/usr/local/py-utils/bin/mypy",
-    // "python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
-    // "python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
-    // "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
-    "python.linting.flake8Args": [
-      "--max-line-length=E501"
-    ],
-    // "python.linting.mypyArgs": [
-    //   "--check-untyped-defs"
-    // ],
-    "[python]": {
-      "editor.tabSize": 4,
-      "editor.formatOnPaste": false
-    }
+  //   "python.languageServer": "Pylance",
+  //   "python.linting.enabled": true,
+  //   "python.linting.pylintEnabled": false,
+  //   "python.linting.flake8Enabled": false,
+  //   "python.linting.mypyEnabled": true,
+  //   "python.formatting.provider": "black",
+  //   "python.linting.lintOnSave": true,
+  //   "editor.formatOnSave": true,
+  //   "python.autoComplete.addBrackets": false,
+  //   "python.analysis.typeCheckingMode": "strict",
+  //   "python.analysis.diagnosticMode": "workspace",
+  //   "python.analysis.diagnosticSeverityOverrides": {
+  //     "reportMissingTypeStubs": "none",
+  //     "reportUnknownVariableType": "none",
+  //     "reportUnknownMemberType": "none",
+  //     "reportGeneralTypeIssues": "none"
+  //     // "reportUnusedImport": "warning",
+  //     // "reportUnusedVariable": "warning",
+  //     // "reportUnusedClass": "warning",
+  //     // "reportDuplicateImport": "warning",
+  //     // "reportMissingParameterType": "warning",
+  //     // "reportPrivateUsage": "warning",
+  //     // "reportPropertyTypeMismatch": "warning",
+  //     // "reportUnboundVariable": "warning",
+  //     // "reportUnusedExpression": "warning"
+  //   },
+  //   // "editor.codeActionsOnSave": {
+  //   //     "source.organizeImports": true
+  //   // },
+  //   // "python.formatting.autopep8Path": "/usr/local/py-utils/bin/autopep8",
+  //   // "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+  //   // "python.formatting.yapfPath": "/usr/local/py-utils/bin/yapf",
+  //   // "python.linting.banditPath": "/usr/local/py-utils/bin/bandit",
+  //   // "python.linting.flake8Path": "/usr/local/py-utils/bin/flake8",
+  //   // "python.linting.mypyPath": "/usr/local/py-utils/bin/mypy",
+  //   // "python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
+  //   // "python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
+  //   // "python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
+  //   // "python.linting.flake8Args": [
+  //   //   "--max-line-length=E501"
+  //   //   // "--extend-select=E,F"
+  //   // ],
+  //   "python.linting.mypyArgs": [
+  //     "--show-error-codes",
+  //     "--strict",
+  //     "--ignore-missing-imports"
+  //     //"--disable-error-code no-any-return"
+  //   ],
+  //   "[python]": {
+  //     "editor.tabSize": 4,
+  //     "editor.formatOnPaste": false
+  //   }
   },
   // Add the IDs of extensions you want installed when the container is created.
   "extensions": [

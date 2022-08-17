@@ -11,17 +11,17 @@ from helper import (
 from accounts import test1_address, test1_private_key, test2_address, test2_private_key
 
 
-def create_asset(client: AlgodClient, private_key: str, clawback: str):
+def create_asset(client: AlgodClient, private_key: str, clawback: str) -> int:
     sender = address_from_private_key(private_key)
 
-    return helper.create_asset(
+    return helper.create_asset(  # type: ignore[no-any-return]
         client,
         private_key,
+        asset_name="ASA",
+        unit_name="ASA",
         total=1,
         decimals=0,
         default_frozen=True,
-        unit_name="ASA",
-        asset_name="ASA",
         manager=sender,
         reserve=sender,
         freeze=sender,
@@ -29,7 +29,7 @@ def create_asset(client: AlgodClient, private_key: str, clawback: str):
     )
 
 
-def main():
+def main() -> None:
     client = create_algod_client()
 
     asset_id = create_asset(client, test1_private_key, test2_address)

@@ -13,6 +13,8 @@ from pyteal import (
     Subroutine,
     Expr,
     TealType,
+    Add,
+    Minus,
 )
 from algosdk.future.transaction import StateSchema
 
@@ -51,12 +53,12 @@ def clear_state_program() -> str:
 
 
 @Subroutine(TealType.none)
-def create():
+def create() -> Expr:
     return Seq(App.globalPut(GlobalVariables.count, Int(0)))
 
 
 @Subroutine(TealType.none)
-def no_op():
+def no_op() -> Expr:
     return Seq(
         Cond(
             [Txn.application_args[0] == Bytes(AppMethods.add), add()],
@@ -66,10 +68,10 @@ def no_op():
 
 
 @Subroutine(TealType.none)
-def add():
+def add() -> Expr:
     count = App.globalGet(GlobalVariables.count)
     return Seq(
-        App.globalPut(GlobalVariables.count, count + Int(1)),
+        App.globalPut(GlobalVariables.count, Add(count, Int(1))),
     )
 
 
@@ -79,12 +81,12 @@ def subtract() -> Expr:
     return Seq(
         If(
             count > Int(0),
-            App.globalPut(GlobalVariables.count, count - Int(1)),
+            App.globalPut(GlobalVariables.count, Minus(count, Int(1))),
         ),
     )
 
 
-def main():
+def main() -> None:
     print(approval_program())
 
 

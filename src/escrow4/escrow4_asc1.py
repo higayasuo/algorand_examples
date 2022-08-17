@@ -19,6 +19,7 @@ from pyteal import (
     Assert,
     Global,
     Gtxn,
+    AssetParam,
     Expr,
 )
 
@@ -91,14 +92,37 @@ def init() -> Expr:
 
 @Subroutine(TealType.none)
 def check_init() -> Expr:
-    asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
     return Seq(
-        check_zero_addresses(Int(0)),
+        Assert(Global.group_size() == Int(2)),
+        check_init_call_app(Int(0)),
+        check_init_payment(Int(1)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_init_call_app(gtxn_index: Expr) -> Expr:
+    asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
+    clawback_ex = AssetParam.clawback(Txn.assets[0])
+    defaultFrozen_ex = AssetParam.defaultFrozen(Txn.assets[0])
+    return Seq(
+        check_zero_addresses(gtxn_index),
         asset_id_ex,
         Assert(asset_id_ex.hasValue() == Int(0)),
-        Assert(Txn.application_args.length() == Int(2)),
-        Assert(Txn.assets.length() == Int(1)),
+        Assert(Gtxn[gtxn_index].application_args.length() == Int(2)),
+        Assert(Gtxn[gtxn_index].assets.length() == Int(1)),
+        Assert(Gtxn[gtxn_index].sender() == Global.creator_address()),
+        clawback_ex,
+        Assert(clawback_ex.hasValue() == Int(1)),
+        Assert(clawback_ex.value() == Global.current_application_address()),
+        defaultFrozen_ex,
+        Assert(defaultFrozen_ex.hasValue() == Int(1)),
+        Assert(defaultFrozen_ex.value() == Int(1)),
     )
+
+
+@Subroutine(TealType.none)
+def check_init_payment(gtxn_index: Expr) -> Expr:
+    return Seq()
 
 
 @Subroutine(TealType.none)
@@ -113,58 +137,12 @@ def check_zero_addresses(gtxn_index: Expr) -> Expr:
 @Subroutine(TealType.none)
 def transfer_asset() -> Expr:
     return Seq(
-        check_transfer_asset(),
-        asset_transfer_txn(),
+        transfer_asset_txn(),
     )
 
 
 @Subroutine(TealType.none)
-def check_transfer_asset() -> Expr:
-    return Seq(
-        Assert(Global.group_size() == Int(3)),
-        Assert(Gtxn[0].sender() == Gtxn[1].sender()),
-        Assert(Gtxn[0].sender() == Gtxn[2].sender()),
-        check_opt_in(Int(0)),
-        check_application_call(Int(1)),
-        check_payment(Int(2)),
-    )
-
-
-@Subroutine(TealType.none)
-def check_opt_in(gtxn_index: Expr) -> Expr:
-    return Seq(
-        check_zero_addresses(gtxn_index),
-        Assert(Gtxn[gtxn_index].type_enum() == TxnType.AssetTransfer),
-        Assert(Gtxn[gtxn_index].asset_amount() == Int(0)),
-    )
-
-
-@Subroutine(TealType.none)
-def check_application_call(gtxn_index: Expr) -> Expr:
-    asset_id = App.globalGet(GlobalVariables.asset_id)
-    return Seq(
-        check_zero_addresses(gtxn_index),
-        Assert(Gtxn[gtxn_index].type_enum() == TxnType.ApplicationCall),
-        Assert(Gtxn[gtxn_index].application_args.length() == Int(1)),
-        Assert(Gtxn[gtxn_index].accounts.length() == Int(1)),
-        Assert(Gtxn[gtxn_index].assets.length() == Int(1)),
-        Assert(Gtxn[gtxn_index].assets[0] == asset_id),
-    )
-
-
-@Subroutine(TealType.none)
-def check_payment(gtxn_index: Expr) -> Expr:
-    price = App.globalGet(GlobalVariables.price)
-    return Seq(
-        check_zero_addresses(gtxn_index),
-        Assert(Gtxn[gtxn_index].type_enum() == TxnType.Payment),
-        Assert(Gtxn[gtxn_index].amount() == price),
-        Assert(Gtxn[gtxn_index].receiver() == Gtxn[gtxn_index - Int(1)].accounts[1]),
-    )
-
-
-@Subroutine(TealType.none)
-def asset_transfer_txn() -> Expr:
+def transfer_asset_txn() -> Expr:
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(

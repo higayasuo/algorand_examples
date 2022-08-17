@@ -15,7 +15,6 @@ from helper import (
     sign_send_wait_group_transactions,
     compile_smart_contract,
     create_app,
-    delete_app,
     destroy_asset,
     fund,
 )
@@ -30,7 +29,7 @@ from escrow_bad_asc1 import (
 from utils import print_red
 
 
-def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
+def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple[int, str]:
     approval = compile_smart_contract(client, approval_program())
     clear = compile_smart_contract(client, clear_state_program())
 
@@ -91,7 +90,7 @@ def buy(
     )
 
 
-def main():
+def main() -> None:
     client = create_algod_client()
 
     app_id, escrow_address = create_escrow_asc1(client, test1_private_key)

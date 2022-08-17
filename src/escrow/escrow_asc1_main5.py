@@ -16,14 +16,10 @@ from helper import (
     create_algod_client,
     compile_smart_contract,
     create_app,
-    delete_app,
-    opt_out_asset,
-    destroy_asset,
-    call_app,
     fund,
     sign_send_wait_group_transactions,
 )
-from accounts import test1_private_key, test1_address, test2_private_key, test2_address
+from accounts import test1_private_key, test1_address, test2_private_key
 from escrow_asc1 import (
     approval_program,
     clear_state_program,
@@ -33,7 +29,7 @@ from escrow_asc1 import (
 )
 
 
-def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple:
+def create_escrow_asc1(client: AlgodClient, private_key: str) -> tuple[int, str]:
     approval = compile_smart_contract(client, approval_program())
     clear = compile_smart_contract(client, clear_state_program())
 

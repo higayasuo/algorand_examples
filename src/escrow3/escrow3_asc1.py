@@ -17,9 +17,8 @@ from pyteal import (
     App,
     Btoi,
     Assert,
-    Gtxn,
     Global,
-    AssetParam,
+    Expr,
 )
 
 
@@ -58,12 +57,12 @@ def clear_state_program() -> str:
 
 
 @Subroutine(TealType.none)
-def create():
+def create() -> Expr:
     return Seq()
 
 
 @Subroutine(TealType.none)
-def no_op():
+def no_op() -> Expr:
     return Seq(
         Cond(
             [
@@ -79,7 +78,7 @@ def no_op():
 
 
 @Subroutine(TealType.none)
-def init():
+def init() -> Expr:
     asset_id = Txn.assets[0]
     price = Btoi(Txn.application_args[1])
     return Seq(
@@ -90,44 +89,33 @@ def init():
 
 
 @Subroutine(TealType.none)
-def check_init():
-    asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
-    clawback_ex = AssetParam.clawback(Txn.assets[0])
-    defaultFrozen_ex = AssetParam.defaultFrozen(Txn.assets[0])
+def check_init() -> Expr:
     return Seq(
-        check_zero_addresses(Int(0)),
-        asset_id_ex,
-        Assert(asset_id_ex.hasValue() == Int(0)),
-        Assert(Txn.application_args.length() == Int(2)),
-        Assert(Txn.assets.length() == Int(1)),
-        Assert(Txn.sender() == Global.creator_address()),
-        clawback_ex,
-        Assert(clawback_ex.hasValue() == Int(1)),
-        Assert(clawback_ex.value() == Global.current_application_address()),
-        defaultFrozen_ex,
-        Assert(defaultFrozen_ex.hasValue() == Int(1)),
-        Assert(defaultFrozen_ex.value() == Int(1)),
+        Assert(Global.group_size() == Int(2)),
+        check_init_call_app(Int(0)),
+        check_init_payment(Int(1)),
     )
 
 
 @Subroutine(TealType.none)
-def check_zero_addresses(tx_index):
-    return Seq(
-        Assert(Gtxn[tx_index].rekey_to() == Global.zero_address()),
-        Assert(Gtxn[tx_index].close_remainder_to() == Global.zero_address()),
-        Assert(Gtxn[tx_index].asset_close_to() == Global.zero_address()),
-    )
+def check_init_call_app(gtxn_index: Expr) -> Expr:
+    return Seq()
 
 
 @Subroutine(TealType.none)
-def transfer_asset():
+def check_init_payment(gtxn_index: Expr) -> Expr:
+    return Seq()
+
+
+@Subroutine(TealType.none)
+def transfer_asset() -> Expr:
     return Seq(
         transfer_asset_txn(),
     )
 
 
 @Subroutine(TealType.none)
-def transfer_asset_txn():
+def transfer_asset_txn() -> Expr:
     return Seq(
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
@@ -143,7 +131,7 @@ def transfer_asset_txn():
     )
 
 
-def main():
+def main() -> None:
     print(approval_program())
 
 

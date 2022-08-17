@@ -16,7 +16,7 @@ from counter_asc1 import (
 )
 
 
-def main():
+def main() -> None:
     client = create_algod_client()
 
     approval = compile_smart_contract(client, approval_program())

@@ -1,0 +1,33 @@
+{
+  // "python.linting.flake8Enabled": false,
+  // "python.linting.pylintEnabled": false,
+  // "python.linting.mypyEnabled": true,
+  // "python.linting.enabled": true,
+  // "python.linting.prospectorEnabled": false,
+  "python.languageServer": "Pylance",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": false,
+  "python.linting.mypyEnabled": true,
+  "python.formatting.provider": "black",
+  "python.linting.lintOnSave": true,
+  "editor.formatOnSave": true,
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingTypeStubs": "none",
+    "reportUnknownVariableType": "none",
+    "reportUnknownMemberType": "none",
+    "reportGeneralTypeIssues": "none"
+  },
+  "python.linting.mypyArgs": [
+    "--show-error-codes",
+    "--strict",
+    "--ignore-missing-imports"
+    //"--disable-error-code no-any-return"
+  ],
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.formatOnPaste": false
+  }
+}

@@ -1,7 +1,5 @@
 py-algorand-sdk
 pyteal
 python-dotenv
-flake8
-autopep8
 black
 mypy
