@@ -29,8 +29,14 @@
     "--ignore-missing-imports"
     //"--disable-error-code no-any-return"
   ],
+  "python.testing.pytestEnabled": true,
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "[python]": {
     "editor.tabSize": 4,
     "editor.formatOnPaste": false
-  }
+  },
+  "python.testing.pytestArgs": [
+    "-s"
+  ],
+  "python.testing.unittestEnabled": false
 }
