@@ -106,6 +106,7 @@ def check_init_call_app(gtxn_index: Expr) -> Expr:
     defaultFrozen_ex = AssetParam.defaultFrozen(Txn.assets[0])
     return Seq(
         check_zero_addresses(gtxn_index),
+        Assert(Gtxn[gtxn_index].type_enum() == TxnType.ApplicationCall),
         asset_id_ex,
         Assert(asset_id_ex.hasValue() == Int(0)),
         Assert(Gtxn[gtxn_index].application_args.length() == Int(2)),

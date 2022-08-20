@@ -21,10 +21,9 @@ from helper import (
     create_app,
     read_global_state,
     sign_send_wait_group_transactions,
-    sign_send_wait_transaction,
 )
 from accounts import test1_address, test1_private_key, test2_private_key, test2_address
-from escrow.escrow03_asc1 import (
+from escrow.escrow04_asc1 import (
     approval_program,
     clear_state_program,
     global_schema,
@@ -165,9 +164,40 @@ def test1(
     assert buy
 
 
-def test_call_app_mo_payment(
+def test_call_app_sender(
     client: AlgodClient,
     app_id: int,
+    app_address: int,
+    asset_id: int,
+) -> None:
+    with pytest.raises(AlgodHTTPError) as e:
+        print("init_app()")
+        sp = client.suggested_params()
+
+        price = 1000000
+        txn1 = ApplicationNoOpTxn(
+            test2_address,
+            sp,
+            index=app_id,
+            app_args=[AppMethods.init, price],
+            foreign_assets=[asset_id],
+        )
+        txn2 = PaymentTxn(test1_address, sp, receiver=app_address, amt=101000)
+        sign_send_wait_group_transactions(
+            client, [txn1, txn2], [test2_private_key, test1_private_key]
+        )
+    print(e)
+
+    assert client
+    assert app_id
+    assert app_address
+    assert asset_id
+
+
+def test_twice_call_app(
+    client: AlgodClient,
+    app_id: int,
+    app_address: int,
     asset_id: int,
 ) -> None:
     with pytest.raises(AlgodHTTPError) as e:
@@ -182,8 +212,28 @@ def test_call_app_mo_payment(
             app_args=[AppMethods.init, price],
             foreign_assets=[asset_id],
         )
-        sign_send_wait_transaction(client, txn1, test1_private_key)
+        txn2 = PaymentTxn(test1_address, sp, receiver=app_address, amt=101000)
+        sign_send_wait_group_transactions(
+            client, [txn1, txn2], [test1_private_key, test1_private_key]
+        )
+
+        print("twice init_app()")
+        sp = client.suggested_params()
+
+        txn1 = ApplicationNoOpTxn(
+            test1_address,
+            sp,
+            index=app_id,
+            app_args=[AppMethods.init, price],
+            foreign_assets=[asset_id],
+        )
+        txn2 = PaymentTxn(test1_address, sp, receiver=app_address, amt=101000)
+        sign_send_wait_group_transactions(
+            client, [txn1, txn2], [test1_private_key, test1_private_key]
+        )
     print(e)
 
-    assert init_app
-    assert buy
+    assert client
+    assert app_id
+    assert app_address
+    assert asset_id
