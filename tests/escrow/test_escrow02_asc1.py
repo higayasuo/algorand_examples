@@ -4,7 +4,6 @@ from typing import Iterator
 import pytest
 
 from algosdk.v2client.algod import AlgodClient
-from algosdk.error import AlgodHTTPError
 from algosdk.logic import get_application_address
 from algosdk.future.transaction import (
     AssetOptInTxn,
@@ -17,16 +16,13 @@ import helper
 from helper import (
     delete_app,
     destroy_asset,
-    opt_in_asset,
-    opt_out_asset,
-    call_app,
     compile_smart_contract,
     create_app,
-    fund,
+    read_global_state,
     sign_send_wait_group_transactions,
 )
 from accounts import test1_address, test1_private_key, test2_private_key, test2_address
-from escrow_asc1 import (
+from escrow.escrow02_asc1 import (
     approval_program,
     clear_state_program,
     global_schema,
@@ -82,17 +78,28 @@ def asset_id(client: AlgodClient, app_address: str) -> Iterator[int]:
 
 
 @pytest.fixture
-def opt_in(client: AlgodClient, asset_id: int) -> Iterator[bool]:
-    opt_in_asset(client, test2_private_key, asset_id)
-    yield True
-    opt_out_asset(
-        client, test2_private_key, asset_id=asset_id, close_assets_to=test1_address
+def init_app(
+    client: AlgodClient,
+    app_id: int,
+    app_address: str,
+    asset_id: int,
+) -> bool:
+    print("init_app()")
+    sp = client.suggested_params()
+
+    price = 1000000
+    txn1 = ApplicationNoOpTxn(
+        test1_address,
+        sp,
+        index=app_id,
+        app_args=[AppMethods.init, price],
+        foreign_assets=[asset_id],
+    )
+    txn2 = PaymentTxn(test1_address, sp, receiver=app_address, amt=101000)
+    sign_send_wait_group_transactions(
+        client, [txn1, txn2], [test1_private_key, test1_private_key]
     )
 
-
-@pytest.fixture
-def fund_to_app(client: AlgodClient, app_address: str) -> bool:
-    fund(client, test1_private_key, app_address, 101000)
     return True
 
 
@@ -141,73 +148,16 @@ def buy(
     )
 
 
-def test_escrow_asc1(
-    client: AlgodClient, app_id: int, asset_id: int, opt_in: bool
-) -> None:
-    with pytest.raises(AlgodHTTPError) as e:
-        call_app(
-            client,
-            test2_private_key,
-            app_id,
-            app_args=[AppMethods.transfer_asset],
-            foreign_assets=[asset_id],
-            accounts=[test1_address],
-        )
-    print(e)
-
-    assert app_id > 0
-    assert asset_id > 0
-    assert opt_in
-
-
-def test_escrow_asc1_2(
-    client: AlgodClient, app_id: int, app_address: int, asset_id: int, opt_in: bool
-) -> None:
-    with pytest.raises(AlgodHTTPError) as e:
-        fund(client, test1_private_key, app_address, 1000)
-        call_app(
-            client,
-            test2_private_key,
-            app_id,
-            app_args=[AppMethods.transfer_asset],
-            foreign_assets=[asset_id],
-            accounts=[test1_address],
-        )
-    print(e)
-
-    assert app_id > 0
-    assert app_address
-    assert asset_id > 0
-    assert opt_in
-
-
-def test_escrow_asc1_3(
+def test1(
     client: AlgodClient,
     app_id: int,
-    app_address: int,
     asset_id: int,
-    opt_in: bool,
-    fund_to_app: bool,
-) -> None:
-    call_app(
-        client,
-        test2_private_key,
-        app_id,
-        app_args=[AppMethods.transfer_asset],
-        foreign_assets=[asset_id],
-        accounts=[test1_address],
-    )
-
-    assert app_id > 0
-    assert app_address
-    assert asset_id > 0
-    assert opt_in
-    assert fund_to_app
-
-
-def test_escrow_asc1_4(
-    fund_to_app: bool,
+    init_app: bool,
     buy: bool,
 ) -> None:
-    assert fund_to_app
+    state = read_global_state(client, app_id)
+    assert state["asset_id"] == asset_id
+    assert state["price"] == 1000000
+
+    assert init_app
     assert buy

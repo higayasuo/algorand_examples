@@ -22,7 +22,7 @@ from helper import (
     sign_send_wait_group_transactions,
 )
 from accounts import test1_address, test1_private_key, test2_private_key, test2_address
-from escrow2_asc1 import (
+from escrow.escrow03_asc1 import (
     approval_program,
     clear_state_program,
     global_schema,
@@ -148,7 +148,7 @@ def buy(
     )
 
 
-def test_escrow2_asc1(
+def test1(
     client: AlgodClient,
     app_id: int,
     asset_id: int,

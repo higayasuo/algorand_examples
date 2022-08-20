@@ -5,6 +5,7 @@ import pytest
 from algosdk.v2client.algod import AlgodClient
 from algosdk.error import AlgodHTTPError
 from algosdk.logic import get_application_address
+from algosdk.encoding import decode_address
 
 import helper
 from helper import (
@@ -18,7 +19,7 @@ from helper import (
     fund,
 )
 from accounts import test1_address, test1_private_key, test2_private_key
-from escrow_bad_asc1 import (
+from escrow.escrow01_bad2_asc1 import (
     approval_program,
     clear_state_program,
     global_schema,
@@ -88,7 +89,7 @@ def fund_to_app(client: AlgodClient, app_address: str) -> bool:
     return True
 
 
-def test_escrow_bad_asc1(
+def test1(
     client: AlgodClient,
     app_id: int,
     app_address: int,
@@ -102,9 +103,9 @@ def test_escrow_bad_asc1(
             test2_private_key,
             app_id,
             # app_args=[AppMethods.transfer_asset],
-            app_args=[AppMethods.transfer_asset, asset_id],
-            # foreign_assets=[asset_id],
-            accounts=[test1_address],
+            app_args=[AppMethods.transfer_asset, decode_address(test1_address)],
+            foreign_assets=[asset_id],
+            # accounts=[test1_address],
         )
     print(e)
 
