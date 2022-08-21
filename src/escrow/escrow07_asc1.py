@@ -163,8 +163,12 @@ def check_transfer_asset() -> Expr:
 
 @Subroutine(TealType.none)
 def check_transfer_asset_opt_in(gtxn_index: Expr) -> Expr:
+    asset_id = App.globalGet(GlobalVariables.asset_id)
     return Seq(
         check_zero_addresses(gtxn_index),
+        Assert(Gtxn[gtxn_index].type_enum() == TxnType.AssetTransfer),
+        Assert(Gtxn[gtxn_index].xfer_asset() == asset_id),
+        Assert(Gtxn[gtxn_index].asset_amount() == Int(0)),
     )
 
 
