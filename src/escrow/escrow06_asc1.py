@@ -18,8 +18,9 @@ from pyteal import (
     Btoi,
     Assert,
     Global,
-    Expr,
     Gtxn,
+    AssetParam,
+    Expr,
 )
 
 
@@ -100,8 +101,23 @@ def check_init() -> Expr:
 
 @Subroutine(TealType.none)
 def check_init_call_app(gtxn_index: Expr) -> Expr:
+    asset_id_ex = App.globalGetEx(Int(0), GlobalVariables.asset_id)
+    clawback_ex = AssetParam.clawback(Txn.assets[0])
+    defaultFrozen_ex = AssetParam.defaultFrozen(Txn.assets[0])
     return Seq(
         check_zero_addresses(gtxn_index),
+        Assert(Gtxn[gtxn_index].type_enum() == TxnType.ApplicationCall),
+        asset_id_ex,
+        Assert(asset_id_ex.hasValue() == Int(0)),
+        Assert(Gtxn[gtxn_index].application_args.length() == Int(2)),
+        Assert(Gtxn[gtxn_index].assets.length() == Int(1)),
+        Assert(Gtxn[gtxn_index].sender() == Global.creator_address()),
+        clawback_ex,
+        Assert(clawback_ex.hasValue() == Int(1)),
+        Assert(clawback_ex.value() == Global.current_application_address()),
+        defaultFrozen_ex,
+        Assert(defaultFrozen_ex.hasValue() == Int(1)),
+        Assert(defaultFrozen_ex.value() == Int(1)),
     )
 
 
@@ -109,6 +125,10 @@ def check_init_call_app(gtxn_index: Expr) -> Expr:
 def check_init_payment(gtxn_index: Expr) -> Expr:
     return Seq(
         check_zero_addresses(gtxn_index),
+        Assert(Gtxn[gtxn_index].type_enum() == TxnType.Payment),
+        Assert(Gtxn[gtxn_index].sender() == Global.creator_address()),
+        Assert(Gtxn[gtxn_index].receiver() == Global.current_application_address()),
+        Assert(Gtxn[gtxn_index].amount() >= Int(101000)),
     )
 
 
@@ -124,7 +144,39 @@ def check_zero_addresses(gtxn_index: Expr) -> Expr:
 @Subroutine(TealType.none)
 def transfer_asset() -> Expr:
     return Seq(
+        check_transfer_asset(),
         transfer_asset_txn(),
+    )
+
+
+@Subroutine(TealType.none)
+def check_transfer_asset() -> Expr:
+    return Seq(
+        Assert(Global.group_size() == Int(3)),
+        check_transfer_asset_opt_in(Int(0)),
+        check_transfer_asset_txn(Int(1)),
+        check_transfer_asset_payment(Int(2)),
+    )
+
+
+@Subroutine(TealType.none)
+def check_transfer_asset_opt_in(gtxn_index: Expr) -> Expr:
+    return Seq(
+        check_zero_addresses(gtxn_index),
+    )
+
+
+@Subroutine(TealType.none)
+def check_transfer_asset_txn(gtxn_index: Expr) -> Expr:
+    return Seq(
+        check_zero_addresses(gtxn_index),
+    )
+
+
+@Subroutine(TealType.none)
+def check_transfer_asset_payment(gtxn_index: Expr) -> Expr:
+    return Seq(
+        check_zero_addresses(gtxn_index),
     )
 
 

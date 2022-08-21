@@ -21,10 +21,9 @@ from helper import (
     create_app,
     read_global_state,
     sign_send_wait_group_transactions,
-    sign_send_wait_transaction,
 )
 from accounts import test1_address, test1_private_key, test2_private_key, test2_address
-from escrow.escrow03_asc1 import (
+from escrow.escrow06_asc1 import (
     approval_program,
     clear_state_program,
     global_schema,
@@ -150,7 +149,7 @@ def buy(
     )
 
 
-def test_init_app(
+def test_buy(
     client: AlgodClient,
     app_id: int,
     asset_id: int,
@@ -168,26 +167,33 @@ def test_init_app(
     assert buy
 
 
-def test_init_app_mo_payment(
+def test_buy_mo_payment(
     client: AlgodClient,
     app_id: int,
     asset_id: int,
+    init_app: bool,
 ) -> None:
     with pytest.raises(AlgodHTTPError) as e:
-        print("init_app()")
+        print("buy()")
         sp = client.suggested_params()
 
-        price = 1000000
-        txn1 = ApplicationNoOpTxn(
-            test1_address,
+        txn1 = AssetOptInTxn(test2_address, sp, index=asset_id)
+        txn2 = ApplicationNoOpTxn(
+            test2_address,
             sp,
-            index=app_id,
-            app_args=[AppMethods.init, price],
+            app_id,
+            app_args=[AppMethods.transfer_asset],
             foreign_assets=[asset_id],
+            accounts=[test1_address],
         )
-        sign_send_wait_transaction(client, txn1, test1_private_key)
+        sign_send_wait_group_transactions(
+            client,
+            [txn1, txn2],
+            [test2_private_key, test2_private_key],
+        )
     print(e)
 
     assert client
     assert app_id
     assert asset_id
+    assert init_app

@@ -148,7 +148,7 @@ def buy(
     )
 
 
-def test1(
+def test_init_app(
     client: AlgodClient,
     app_id: int,
     asset_id: int,
@@ -159,5 +159,8 @@ def test1(
     assert state["asset_id"] == asset_id
     assert state["price"] == 1000000
 
+    assert client
+    assert app_id
+    assert asset_id
     assert init_app
     assert buy
