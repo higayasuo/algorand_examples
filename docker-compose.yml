@@ -5,7 +5,7 @@ services:
       context: .
     volumes:
       - .:/app:cached
-      - extensions:/hoge/vscode/.vscode-server/extensions
+      - extensions:/home/vscode/.vscode-server/extensions
     # working_dir: /app
     network_mode: host
     tty: true
